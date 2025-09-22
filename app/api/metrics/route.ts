@@ -13,7 +13,7 @@ const metrics = {
   downloads: 0
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Aggregate metrics
     const aggregated = {

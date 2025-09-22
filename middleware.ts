@@ -1,21 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { RateLimiterMemory } from 'rate-limiter-flexible'
 
 const publicRoutes = ['/api/auth/signin', '/api/auth/signup', '/api/health']
-const rateLimiters = new Map<string, RateLimiterMemory>()
-
-function getRateLimiter(key: string, points: number, duration: number) {
-  if (!rateLimiters.has(key)) {
-    rateLimiters.set(key, new RateLimiterMemory({
-      points,
-      duration,
-      blockDuration: duration * 2,
-    }))
-  }
-  return rateLimiters.get(key)!
-}
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({
@@ -42,24 +29,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Rate limiting
-  try {
-    if (pathname.startsWith('/api/auth/')) {
-      const authLimiter = getRateLimiter('auth', 5, 900) // 5 attempts per 15 minutes
-      await authLimiter.consume(ip)
-    } else if (pathname.startsWith('/api/papers/upload')) {
-      const uploadLimiter = getRateLimiter('upload', 10, 3600) // 10 uploads per hour
-      await uploadLimiter.consume(ip)
-    } else if (pathname.startsWith('/api/')) {
-      const apiLimiter = getRateLimiter('api', 100, 60) // 100 requests per minute
-      await apiLimiter.consume(ip)
-    }
-  } catch (rejRes: any) {
-    return NextResponse.json(
-      { error: 'Too many requests', retryAfter: Math.round(rejRes.msBeforeNext / 1000) || 60 },
-      { status: 429, headers: response.headers }
-    )
-  }
+  // Rate limiting removed for better UX
 
   // Skip auth for public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {

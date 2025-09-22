@@ -1,43 +1,32 @@
-import pino from 'pino'
-
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-export const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: isDevelopment
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          ignore: 'pid,hostname',
-          translateTime: 'SYS:standard',
-        },
-      }
-    : undefined,
-  base: {
-    env: process.env.NODE_ENV,
-    revision: process.env.VERCEL_GIT_COMMIT_SHA,
+// Simple console-based logger to avoid worker thread issues
+export const logger = {
+  info: (data: any, message?: string) => {
+    if (isDevelopment) {
+      console.log(`[INFO] ${message || ''}`, data)
+    }
   },
-  redact: {
-    paths: ['req.headers.authorization', 'req.headers.cookie', '*.password', '*.token', '*.key'],
-    censor: '[REDACTED]',
+  error: (data: any, message?: string) => {
+    console.error(`[ERROR] ${message || ''}`, data)
   },
-  serializers: {
-    req: (req) => ({
-      method: req.method,
-      url: req.url,
-      headers: req.headers,
-      ip: req.headers?.['x-forwarded-for'] || req.headers?.['x-real-ip'],
-    }),
-    res: (res) => ({
-      statusCode: res.statusCode,
-    }),
-    err: pino.stdSerializers.err,
+  warn: (data: any, message?: string) => {
+    console.warn(`[WARN] ${message || ''}`, data)
   },
-})
+  debug: (data: any, message?: string) => {
+    if (isDevelopment) {
+      console.debug(`[DEBUG] ${message || ''}`, data)
+    }
+  }
+}
 
 export function createRequestLogger(context: string) {
-  return logger.child({ context })
+  return {
+    info: (data: any, message?: string) => logger.info(data, `[${context}] ${message || ''}`),
+    error: (data: any, message?: string) => logger.error(data, `[${context}] ${message || ''}`),
+    warn: (data: any, message?: string) => logger.warn(data, `[${context}] ${message || ''}`),
+    debug: (data: any, message?: string) => logger.debug(data, `[${context}] ${message || ''}`)
+  }
 }
 
 export function logApiRequest(req: Request, res: Response, duration: number, context: string) {

@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use transaction for atomicity
-    const result = await DatabaseService.transaction(async (client) => {
+    const result = await DatabaseService.transaction(async (_client) => {
       // Save paper to database
       const { data: paper, error: dbError } = await supabase
         .from('papers')

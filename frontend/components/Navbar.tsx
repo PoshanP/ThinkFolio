@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, MessageSquare, Library, User, LogOut, LogIn } from "lucide-react";
+import { FileText, MessageSquare, Library, User, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 

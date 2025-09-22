@@ -17,7 +17,9 @@ export async function requireAuth(): Promise<User> {
   const user = await getCurrentUser()
 
   if (!user) {
-    throw new Error('Unauthorized')
+    const error = new Error('Unauthorized') as any
+    error.status = 401
+    throw error
   }
 
   return user

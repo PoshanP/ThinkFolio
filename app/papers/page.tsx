@@ -1,87 +1,130 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PaperCard } from "@/frontend/components/PaperCard";
-import { Search, Filter, Plus, Grid, List } from "lucide-react";
+import { Search, Filter, Plus, Grid, List, FileText } from "lucide-react";
 import Link from "next/link";
 
-const mockPapers = [
-  {
-    id: "1",
-    title: "Attention Is All You Need",
-    authors: "Vaswani et al.",
-    abstract: "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
-    uploadedAt: new Date("2024-01-15"),
-    pageCount: 15,
-    chatCount: 8,
-    tags: ["NLP", "Transformers", "Deep Learning"],
-  },
-  {
-    id: "2",
-    title: "BERT: Pre-training of Deep Bidirectional Transformers",
-    authors: "Devlin et al.",
-    abstract: "We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations...",
-    uploadedAt: new Date("2024-01-14"),
-    pageCount: 16,
-    chatCount: 12,
-    tags: ["NLP", "Pre-training", "Language Models"],
-  },
-  {
-    id: "3",
-    title: "GPT-3: Language Models are Few-Shot Learners",
-    authors: "Brown et al.",
-    abstract: "Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus...",
-    uploadedAt: new Date("2024-01-13"),
-    pageCount: 75,
-    chatCount: 5,
-    tags: ["Language Models", "Few-shot Learning", "Scaling"],
-  },
-  {
-    id: "4",
-    title: "ResNet: Deep Residual Learning for Image Recognition",
-    authors: "He et al.",
-    abstract: "Deeper neural networks are more difficult to train. We present a residual learning framework to ease the training...",
-    uploadedAt: new Date("2024-01-12"),
-    pageCount: 12,
-    chatCount: 3,
-    tags: ["Computer Vision", "CNNs", "ResNets"],
-  },
-  {
-    id: "5",
-    title: "Generative Adversarial Networks",
-    authors: "Goodfellow et al.",
-    abstract: "We propose a new framework for estimating generative models via an adversarial process...",
-    uploadedAt: new Date("2024-01-11"),
-    pageCount: 9,
-    chatCount: 7,
-    tags: ["GANs", "Generative Models", "Deep Learning"],
-  },
-  {
-    id: "6",
-    title: "YOLO: You Only Look Once",
-    authors: "Redmon et al.",
-    abstract: "We present YOLO, a new approach to object detection. Prior work on object detection repurposes classifiers...",
-    uploadedAt: new Date("2024-01-10"),
-    pageCount: 10,
-    chatCount: 4,
-    tags: ["Object Detection", "Computer Vision", "Real-time"],
-  },
-];
+interface Paper {
+  id: string;
+  title: string;
+  source: string;
+  page_count: number;
+  created_at: string;
+  chatCount?: number;
+}
 
 export default function PapersPage() {
+  const [papers, setPapers] = useState<Paper[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const allTags = Array.from(new Set(mockPapers.flatMap(p => p.tags)));
+  useEffect(() => {
+    fetchPapers();
+  }, []);
 
-  const filteredPapers = mockPapers.filter(paper => {
-    const matchesSearch = paper.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          paper.authors.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTags = selectedTags.length === 0 ||
-                        selectedTags.some(tag => paper.tags.includes(tag));
-    return matchesSearch && matchesTags;
+  const fetchPapers = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/papers');
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Fetch chat count for each paper
+        const papersWithChatCount = await Promise.all(
+          (data.data || []).map(async (paper: Paper) => {
+            try {
+              const chatResponse = await fetch(`/api/chat/sessions?paperId=${paper.id}`);
+              const chatData = await chatResponse.json();
+              return {
+                ...paper,
+                chatCount: chatData.data?.length || 0
+              };
+            } catch {
+              return { ...paper, chatCount: 0 };
+            }
+          })
+        );
+
+        setPapers(papersWithChatCount);
+      }
+    } catch (error) {
+      console.error('Error fetching papers:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const allSources = Array.from(new Set(papers.map(p => p.source)));
+
+  const filteredPapers = papers.filter(paper => {
+    const matchesSearch = paper.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSources = selectedSources.length === 0 ||
+                          selectedSources.includes(paper.source);
+    return matchesSearch && matchesSources;
   });
+
+  const formatSourceLabel = (source: string) => {
+    switch (source) {
+      case 'upload': return 'Uploaded';
+      case 'url': return 'From URL';
+      default: return source;
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    const diffInDays = diffInHours / 24;
+
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)} hours ago`;
+    } else if (diffInDays < 7) {
+      return `${Math.floor(diffInDays)} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              My Papers
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Loading your research papers...
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="flex justify-between">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -111,7 +154,7 @@ export default function PapersPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search papers by title or author..."
+              placeholder="Search papers by title..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
             />
           </div>
@@ -142,41 +185,80 @@ export default function PapersPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mt-4">
-          <span className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
-            <Filter className="h-4 w-4" />
-            Filter by tags:
-          </span>
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => {
-                setSelectedTags(prev =>
-                  prev.includes(tag)
-                    ? prev.filter(t => t !== tag)
-                    : [...prev, tag]
-                );
-              }}
-              className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                selectedTags.includes(tag)
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
+        {allSources.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            <span className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+              <Filter className="h-4 w-4" />
+              Filter by source:
+            </span>
+            {allSources.map((source) => (
+              <button
+                key={source}
+                onClick={() => {
+                  setSelectedSources(prev =>
+                    prev.includes(source)
+                      ? prev.filter(s => s !== source)
+                      : [...prev, source]
+                  );
+                }}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  selectedSources.includes(source)
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {formatSourceLabel(source)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className={viewMode === "grid"
-        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        : "space-y-4"
-      }>
-        {filteredPapers.map((paper) => (
-          <PaperCard key={paper.id} paper={paper} viewMode={viewMode} />
-        ))}
-      </div>
+      {filteredPapers.length === 0 ? (
+        <div className="text-center py-12">
+          <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            {papers.length === 0 ? 'No papers yet' : 'No papers match your search'}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {papers.length === 0
+              ? 'Upload your first research paper to get started'
+              : 'Try adjusting your search or filter criteria'
+            }
+          </p>
+          {papers.length === 0 && (
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Upload Your First Paper</span>
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className={viewMode === "grid"
+          ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          : "space-y-4"
+        }>
+          {filteredPapers.map((paper) => (
+            <PaperCard
+              key={paper.id}
+              paper={{
+                id: paper.id,
+                title: paper.title,
+                authors: formatSourceLabel(paper.source),
+                abstract: `${paper.page_count} pages • ${formatTimeAgo(paper.created_at)}`,
+                uploadedAt: new Date(paper.created_at),
+                pageCount: paper.page_count,
+                chatCount: paper.chatCount || 0,
+                tags: [formatSourceLabel(paper.source)]
+              }}
+              viewMode={viewMode}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

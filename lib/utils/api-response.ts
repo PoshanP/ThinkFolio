@@ -13,7 +13,8 @@ export function handleError(error: unknown): NextResponse<ApiResponse> {
   console.error('API Error:', error)
 
   if (error instanceof Error) {
-    return errorResponse(error.message, 500)
+    const status = (error as any).status || 500
+    return errorResponse(error.message, status)
   }
 
   return errorResponse('An unexpected error occurred', 500)
