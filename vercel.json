@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "app/api/papers/upload/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/chat/message/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "LOG_LEVEL": "info"
+  }
+}
