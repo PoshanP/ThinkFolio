@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     // Execute all queries
     for (const query of queries) {
       try {
-        const { error } = await supabase.rpc('exec_sql', { sql: query })
+        const { error } = await supabase.rpc('exec_sql', { sql: query } as any)
         if (error) {
           // Try direct query if RPC doesn't work
           const directResult = await (supabase as any).from('__temp__').select().limit(0)

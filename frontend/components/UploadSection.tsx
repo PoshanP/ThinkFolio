@@ -111,6 +111,7 @@ export function UploadSection() {
 
       // Process document for RAG (chunking and embedding)
       setProcessingStatus("Processing document for AI chat...");
+
       const formData = new FormData();
       formData.append('file', fileToProcess);
       formData.append('paper_id', paper.id);
@@ -173,28 +174,7 @@ export function UploadSection() {
       if (sessionError) throw sessionError;
 
       // Add summary as first message from the system
-      const summaryMessage = `📄 **Paper Successfully Uploaded and Processed**
-
-📝 **Title:** ${paperTitle}
-📄 **Pages:** ${pageCount}
-📋 **Source:** ${source}
-
----
-
-🔍 **Paper Summary:**
-${summary}
-
----
-
-💡 **How can I help you?**
-I can:
-• Explain complex concepts from the paper
-• Summarize specific sections
-• Answer questions about methodology or findings
-• Help you understand the implications
-• Compare with related research
-
-Feel free to ask me anything about this paper!`;
+      const summaryMessage = summary;
 
       console.log('Attempting to save message for session:', session.id);
       console.log('User ID:', user.id);

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to get the PDF file content from storage
+    // Try to get the PDF file content from storage and parse it properly
     let pdfContent = '';
     try {
       const { data: fileData, error: downloadError } = await supabase.storage
@@ -45,8 +45,22 @@ export async function POST(request: NextRequest) {
         .download(paper.storage_path);
 
       if (!downloadError && fileData) {
-        // Convert blob to text (this will be garbled for PDFs but OpenAI can still extract some info)
-        pdfContent = await fileData.text();
+        // Try to parse PDF using pdf-parse if available
+        try {
+          const pdfParse = await import('pdf-parse');
+          const buffer = await fileData.arrayBuffer();
+          const data = await pdfParse.default(buffer);
+          pdfContent = data.text;
+        } catch (parseError) {
+          console.log('PDF parsing failed, trying text extraction:', parseError);
+          // Fallback to raw text extraction
+          const text = await fileData.text();
+          // Extract readable text patterns from PDF binary
+          const readableText = text.match(/[A-Za-z0-9\s\.,\-\(\)\[\]]+/g);
+          if (readableText) {
+            pdfContent = readableText.join(' ').replace(/\s+/g, ' ');
+          }
+        }
       }
     } catch (err) {
       console.log('Could not download PDF:', err);
@@ -75,20 +89,11 @@ export async function POST(request: NextRequest) {
 
     // If we still don't have content, provide a fallback
     if (!contextForSummary) {
-      const fallbackSummary = `🌟 **Welcome to your research paper chat!**
+      const fallbackSummary = `Title: ${paper?.title || 'Research Paper'}
 
-Your paper "${paper?.title || 'Research Paper'}" (${paper?.page_count || 'unknown'} pages) has been successfully uploaded.
+This research paper (${paper?.page_count || 'unknown'} pages) has been uploaded and is ready for analysis. The document processing is complete and you can now ask questions about the content, methodology, findings, or any specific sections of the paper.
 
-🔄 **Processing Status:** The document is ready for chat.
-
-💡 **What you can do:**
-• Ask questions about any part of the paper
-• Request explanations of complex concepts
-• Get summaries of specific sections
-• Explore methodologies and findings
-• Discuss implications and applications
-
-🚀 Start by asking me anything about your paper!`;
+You can inquire about complex concepts, request explanations of technical details, or discuss the research implications and applications.`;
 
       return NextResponse.json({
         success: true,
@@ -103,15 +108,15 @@ Your paper "${paper?.title || 'Research Paper'}" (${paper?.page_count || 'unknow
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful research assistant. Provide a concise summary of the given content from a research paper. Focus on identifying the main topic, key contributions, methodology, and findings. If the text is partially garbled, extract what information you can.'
+          content: 'You are a research assistant. Extract the actual paper title from the content and provide a concise, factual summary. Format response as:\n\nTitle: [Actual paper title from content]\n\n[2-3 paragraph summary focusing on main research contributions, methodology, and findings]. No emojis or special formatting.'
         },
         {
           role: 'user',
-          content: `Please summarize this research paper titled "${paper?.title || 'Research Paper'}" (${paper?.page_count || 0} pages):\n\n${contextForSummary}`
+          content: `Extract the title and summarize this research paper content:\n\n${contextForSummary}`
         }
       ],
-      max_tokens: 500,
-      temperature: 0.7,
+      max_tokens: 400,
+      temperature: 0.3,
     });
 
     const summary = completion.choices[0]?.message?.content ||

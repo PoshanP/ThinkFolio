@@ -1,9 +1,7 @@
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitters';
-import { Document } from 'langchain/document';
-import { PDFLoader } from 'langchain/document_loaders/fs/pdf';
-import { TextLoader } from 'langchain/document_loaders/fs/text';
-import { DocxLoader } from 'langchain/document_loaders/fs/docx';
-import { JSONLoader } from 'langchain/document_loaders/fs/json';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { Document } from '@langchain/core/documents';
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
+import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import crypto from 'crypto';
@@ -64,14 +62,19 @@ export class DocumentProcessor {
         break;
       case 'txt':
       case 'md':
-        loader = new TextLoader(filePath);
-        break;
+        // For text files, we'll create a simple document
+        const fs = await import('fs/promises');
+        const content = await fs.readFile(filePath, 'utf-8');
+        return [new Document({ pageContent: content, metadata: { source: filePath } })];
       case 'docx':
         loader = new DocxLoader(filePath);
         break;
       case 'json':
-        loader = new JSONLoader(filePath);
-        break;
+        // For JSON files, we'll parse and stringify
+        const fsJson = await import('fs/promises');
+        const jsonContent = await fsJson.readFile(filePath, 'utf-8');
+        const parsedJson = JSON.parse(jsonContent);
+        return [new Document({ pageContent: JSON.stringify(parsedJson, null, 2), metadata: { source: filePath } })];
       default:
         throw new Error(`Unsupported file type: ${fileType}`);
     }

@@ -13,9 +13,10 @@ interface PaperCardProps {
     tags: string[];
   };
   viewMode: "grid" | "list";
+  onDelete: () => Promise<void>;
 }
 
-export function PaperCard({ paper, viewMode }: PaperCardProps) {
+export function PaperCard({ paper, viewMode, onDelete }: PaperCardProps) {
   if (viewMode === "list") {
     return (
       <Link
@@ -115,7 +116,13 @@ export function PaperCard({ paper, viewMode }: PaperCardProps) {
         <button className="text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
           <Download className="h-4 w-4" />
         </button>
-        <button className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            onDelete();
+          }}
+          className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+        >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>

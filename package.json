@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@langchain/community": "^0.3.56",
+    "@langchain/core": "^0.3.77",
     "@langchain/openai": "^0.6.13",
+    "@langchain/textsplitters": "^0.1.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.4",
     "@types/bcryptjs": "^2.4.6",

@@ -197,9 +197,10 @@ export function ChatInterface({ paperId }: { paperId: string }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: input,
-          paper_id: paperId,
-          session_id: sessionId,
+          question: input,
+          paperId: paperId,
+          sessionId: sessionId,
+          userId: user.id,
         }),
       });
 

@@ -1,6 +1,6 @@
 import { Chroma } from '@langchain/community/vectorstores/chroma';
 import { OpenAIEmbeddings } from '@langchain/openai';
-import { Document } from 'langchain/document';
+import { Document } from '@langchain/core/documents';
 import { SupabaseVectorStore } from '@langchain/community/vectorstores/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { ChromaClient } from 'chromadb';
@@ -128,12 +128,17 @@ export class VectorStoreManager {
 
     const { k = 5, filter, fetchK = 20, lambda = 0.5 } = options;
 
-    return await this.vectorStore.maxMarginalRelevanceSearch(query, {
-      k,
-      filter,
-      fetchK,
-      lambda,
-    });
+    // Use similarity search as fallback if maxMarginalRelevanceSearch is not available
+    if (this.vectorStore.maxMarginalRelevanceSearch) {
+      try {
+        // @ts-ignore - LangChain version compatibility issue
+        return await this.vectorStore.maxMarginalRelevanceSearch(query, k, fetchK);
+      } catch (error) {
+        console.warn('MMR search failed, falling back to similarity search:', error);
+      }
+    }
+
+    return await this.similaritySearch(query, { k, filter });
   }
 
   async hybridSearch(

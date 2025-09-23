@@ -40,9 +40,14 @@ export async function POST(request: NextRequest) {
       .update({ status: 'processing', started_at: new Date().toISOString() })
       .eq('paper_id', paperId);
 
-    // For simple processing, we'll treat the PDF as text
-    // In production, you'd use a proper PDF parser
-    const fileContent = await file.text();
+    // Process PDF content for embedding
+    let fileContent = await file.text();
+
+    // Clean content to avoid Unicode issues
+    fileContent = fileContent
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+      .replace(/\\/g, '\\\\') // Escape backslashes
+      .replace(/"/g, '\\"'); // Escape quotes
 
     // Split the content into chunks
     const chunks = await textSplitter.createDocuments([fileContent]);
@@ -53,10 +58,18 @@ export async function POST(request: NextRequest) {
         const embedding = await embeddings.embedQuery(chunk.pageContent);
         const pageNo = Math.floor(index / 5) + 1; // Estimate page numbers
 
+        // Clean the chunk content for database insertion
+        const cleanContent = chunk.pageContent
+          .slice(0, 2000)
+          .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+          .replace(/\\/g, '\\\\') // Escape backslashes
+          .replace(/'/g, "''") // Escape single quotes for SQL
+          .replace(/"/g, '\\"'); // Escape double quotes
+
         return {
           paper_id: paperId,
           page_no: pageNo,
-          content: chunk.pageContent.slice(0, 2000), // Limit content length
+          content: cleanContent,
           embedding,
           metadata: {
             chunk_index: index,
@@ -126,6 +139,81 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: 'Failed to process document', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+async function processExistingPaper(paperId: string, storagePath: string) {
+  try {
+    // Download the file from storage
+    const { data: fileData } = await supabase.storage
+      .from('papers')
+      .download(storagePath);
+
+    if (!fileData) {
+      return NextResponse.json(
+        { error: 'Could not download file from storage' },
+        { status: 404 }
+      );
+    }
+
+    // Convert to buffer for processing
+    const buffer = await fileData.arrayBuffer();
+    const tempFile = new File([buffer], 'paper.pdf', { type: 'application/pdf' });
+
+    // Create a temporary file path for processing
+    const tempPath = `/tmp/${paperId}.pdf`;
+
+    // Write buffer to temp file for processing
+    const fs = await import('fs/promises');
+    await fs.writeFile(tempPath, Buffer.from(buffer));
+
+    // Process using the document processor
+    const result = await processor.processDocument(
+      paperId,
+      tempPath,
+      'pdf',
+      `Paper ${paperId}`
+    );
+
+    // Clean up temp file
+    try {
+      await fs.unlink(tempPath);
+    } catch (cleanupError) {
+      console.log('Could not clean up temp file:', cleanupError);
+    }
+
+    if (result.success) {
+      await supabase
+        .from('document_processing_status')
+        .upsert({
+          paper_id: paperId,
+          status: 'completed',
+          total_chunks: result.chunksCreated,
+          processed_chunks: result.chunksCreated,
+          completed_at: new Date().toISOString(),
+        });
+
+      return NextResponse.json({
+        success: true,
+        message: `Document processed successfully. Created ${result.chunksCreated} chunks.`,
+        chunksCreated: result.chunksCreated,
+      });
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error: any) {
+    await supabase
+      .from('document_processing_status')
+      .upsert({
+        paper_id: paperId,
+        status: 'failed',
+        error_message: error.message,
+      });
+
+    return NextResponse.json(
+      { error: 'Failed to process existing paper', details: error.message },
       { status: 500 }
     );
   }
