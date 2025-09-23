@@ -359,7 +359,7 @@ export function RecentPapers() {
       )}
 
       {/* Recent Chats Section */}
-      <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6 pl-4">
+      <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6 px-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Recent Chats
@@ -367,7 +367,7 @@ export function RecentPapers() {
           {recentChats.length >= 5 && (
             <button
               onClick={() => router.push('/chat-new')}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline pr-2"
             >
               Show all
             </button>
