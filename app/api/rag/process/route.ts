@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Insert chunks into database
     console.log(`Inserting ${chunkData.length} chunks into database...`);
-    const chunksToInsert = chunkData.map(({ ...chunk }) => chunk);
+    const chunksToInsert = chunkData.map(({ metadata, ...chunk }) => chunk);
 
     console.log('DEBUG: Sample chunk to insert:', chunksToInsert[0]);
     console.log('DEBUG: Total chunks to insert:', chunksToInsert.length);
