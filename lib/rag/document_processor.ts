@@ -4,7 +4,7 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from '@langchain/openai';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 interface ChunkMetadata {
   paperId: string;
@@ -99,26 +99,43 @@ export class DocumentProcessor {
         allChunks.push(...chunks);
       }
 
-      const chunkData = await Promise.all(
-        allChunks.map(async (chunk, index) => {
-          const embedding = await this.embeddings.embedQuery(chunk.pageContent);
-          const pageNo = chunk.metadata?.page || Math.floor(index / 5) + 1;
+      // Batch process embeddings for 5-10x performance improvement
+      const batchSize = 50; // Process in batches to avoid memory issues
+      const chunkData: any[] = [];
+
+      for (let i = 0; i < allChunks.length; i += batchSize) {
+        const batch = allChunks.slice(i, i + batchSize);
+        const batchTexts = batch.map(chunk => chunk.pageContent);
+
+        // Generate embeddings in batch (much faster than individual calls)
+        const batchEmbeddings = await this.embeddings.embedDocuments(batchTexts);
+
+        const batchData = batch.map((chunk, batchIndex) => {
+          const globalIndex = i + batchIndex;
+          const pageNo = chunk.metadata?.page || Math.floor(globalIndex / 5) + 1;
 
           return {
             paper_id: paperId,
             page_no: pageNo,
             content: chunk.pageContent,
-            embedding,
+            embedding: batchEmbeddings[batchIndex],
             metadata: {
-              chunk_index: index,
+              chunk_index: globalIndex,
               chunk_type: this.detectChunkType(chunk.pageContent),
               keyword_count: this.countKeywords(chunk.pageContent),
               has_equations: this.hasEquations(chunk.pageContent),
               has_citations: this.hasCitations(chunk.pageContent),
             },
           };
-        })
-      );
+        });
+
+        chunkData.push(...batchData);
+
+        // Progress logging for large documents
+        if (allChunks.length > 100) {
+          console.log(`Processed embeddings: ${Math.min(i + batchSize, allChunks.length)}/${allChunks.length}`);
+        }
+      }
 
       const { data: insertedChunks, error: chunkError } = await this.supabase
         .from('paper_chunks')

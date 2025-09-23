@@ -84,8 +84,9 @@ export class RAGChain {
 
     const formattedContext = this.formatDocuments(retrievedDocs);
 
+    // Simple conversation history - keep last 6 messages only
     const conversationHistory = context?.sessionId
-      ? this.getConversationHistory(context.sessionId)
+      ? this.getConversationHistory(context.sessionId).slice(-6)
       : [];
 
     const prompt = ChatPromptTemplate.fromMessages([

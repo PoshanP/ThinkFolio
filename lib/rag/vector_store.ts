@@ -4,6 +4,7 @@ import { Document } from '@langchain/core/documents';
 import { SupabaseVectorStore } from '@langchain/community/vectorstores/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { ChromaClient } from 'chromadb';
+import { searchCache } from '../utils/cache';
 
 export interface VectorStoreConfig {
   type: 'chroma' | 'supabase';
@@ -29,6 +30,7 @@ export class VectorStoreManager {
   private config: VectorStoreConfig;
   private supabaseClient: any;
   private chromaClient: ChromaClient | null = null;
+  private isInitialized: boolean = false;
 
   constructor(config: VectorStoreConfig) {
     this.config = config;
@@ -51,11 +53,17 @@ export class VectorStoreManager {
   }
 
   async initialize(paperId?: string): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
     if (this.config.type === 'chroma') {
       await this.initializeChroma(paperId);
     } else {
       await this.initializeSupabase(paperId);
     }
+
+    this.isInitialized = true;
   }
 
   private async initializeChroma(paperId?: string): Promise<void> {
@@ -88,7 +96,7 @@ export class VectorStoreManager {
     this.vectorStore = await SupabaseVectorStore.fromExistingIndex(this.embeddings, {
       client: this.supabaseClient,
       tableName: 'paper_chunks',
-      queryName: 'match_paper_chunks',
+      queryName: 'match_paper_chunks_optimized', // Use our optimized function!
       filter,
     });
   }
@@ -111,11 +119,20 @@ export class VectorStoreManager {
 
     const { k = 5, filter, scoreThreshold = 0.7 } = options;
 
+    // Simple cache check
+    const cacheKey = `sim_${query}_${k}_${scoreThreshold}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached) return cached;
+
     const results = await this.vectorStore.similaritySearchWithScore(query, k, filter);
 
-    return results
+    const filteredResults = results
       .filter(([_, score]) => score >= scoreThreshold)
       .map(([doc]) => doc);
+
+    // Cache results
+    searchCache.set(cacheKey, filteredResults);
+    return filteredResults;
   }
 
   async maxMarginalRelevanceSearch(
@@ -148,13 +165,39 @@ export class VectorStoreManager {
   ): Promise<Document[]> {
     const { k = 5 } = options;
 
-    const semanticResults = await this.similaritySearch(query, { ...options, k: k * 2 });
+    // Simple cache for hybrid search
+    const cacheKey = `hybrid_${query}_${paperId}_${k}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached) return cached;
 
-    const keywordResults = await this.keywordSearch(query, paperId, { k: k * 2 });
+    // Run searches in parallel
+    const [semanticResults, keywordResults] = await Promise.all([
+      this.similaritySearch(query, { ...options, k }),
+      this.keywordSearch(query, paperId, { k: Math.ceil(k / 2) })
+    ]);
 
-    const combinedResults = this.combineResults(semanticResults, keywordResults, k);
+    // Simple combine - take best from each
+    const seen = new Set<string>();
+    const combined: Document[] = [];
 
-    return combinedResults;
+    // Add semantic results first
+    for (const doc of semanticResults) {
+      if (!seen.has(doc.pageContent) && combined.length < k) {
+        seen.add(doc.pageContent);
+        combined.push(doc);
+      }
+    }
+
+    // Fill remaining with keyword results
+    for (const doc of keywordResults) {
+      if (!seen.has(doc.pageContent) && combined.length < k) {
+        seen.add(doc.pageContent);
+        combined.push(doc);
+      }
+    }
+
+    searchCache.set(cacheKey, combined);
+    return combined;
   }
 
   private async keywordSearch(
@@ -193,43 +236,8 @@ export class VectorStoreManager {
     );
   }
 
-  private combineResults(
-    semanticResults: Document[],
-    keywordResults: Document[],
-    k: number
-  ): Document[] {
-    const seen = new Set<string>();
-    const combined: Document[] = [];
-
-    const addUnique = (doc: Document) => {
-      const content = doc.pageContent;
-      if (!seen.has(content)) {
-        seen.add(content);
-        combined.push(doc);
-      }
-    };
-
-    const semanticWeight = 0.6;
-    const keywordWeight = 0.4;
-
-    const maxSemantic = Math.ceil(k * semanticWeight);
-    const maxKeyword = Math.ceil(k * keywordWeight);
-
-    semanticResults.slice(0, maxSemantic).forEach(addUnique);
-    keywordResults.slice(0, maxKeyword).forEach(addUnique);
-
-    if (combined.length < k) {
-      [...semanticResults, ...keywordResults]
-        .slice(maxSemantic + maxKeyword)
-        .forEach(doc => {
-          if (combined.length < k) {
-            addUnique(doc);
-          }
-        });
-    }
-
-    return combined.slice(0, k);
-  }
+  // This function is now simplified and moved to hybridSearch method
+  // No longer needed as a separate method
 
   async deleteCollection(paperId: string): Promise<void> {
     if (this.config.type === 'chroma' && this.chromaClient) {
