@@ -16,6 +16,12 @@ interface ProfileDialogProps {
   onClose: () => void;
 }
 
+interface ProfileData {
+  user: any;
+  profile: any;
+  stats: any;
+}
+
 export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -23,7 +29,12 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  const { data: profileData, error, isLoading: loading, mutate } = useProfileData();
+  const { data: profileData, error, isLoading: loading, mutate } = useProfileData() as {
+    data: ProfileData | undefined;
+    error: any;
+    isLoading: boolean;
+    mutate: any;
+  };
 
   useEffect(() => {
     if (profileData) {

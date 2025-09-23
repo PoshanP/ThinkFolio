@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         try {
           const pdfParse = await import('pdf-parse');
           const buffer = await fileData.arrayBuffer();
-          const data = await pdfParse.default(buffer);
+          const data = await pdfParse.default(Buffer.from(buffer));
           pdfContent = data.text;
         } catch (parseError) {
           console.log('PDF parsing failed, trying text extraction:', parseError);

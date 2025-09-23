@@ -128,7 +128,7 @@ export class VectorStoreManager {
       .select('paper_id')
       .limit(10);
 
-    console.log('DEBUG: Available paper IDs in database:', allPapers?.map(p => p.paper_id));
+    console.log('DEBUG: Available paper IDs in database:', allPapers?.map((p: any) => p.paper_id));
     console.log('DEBUG: Paper query error:', paperError);
     console.log('DEBUG: Using supabase URL:', this.supabaseClient.supabaseUrl);
 
@@ -158,7 +158,7 @@ export class VectorStoreManager {
     }
 
     // Convert to Document format
-    const documents = data.map(chunk => new Document({
+    const documents = data.map((chunk: any) => new Document({
       pageContent: chunk.content,
       metadata: {
         id: chunk.id,
@@ -179,12 +179,12 @@ export class VectorStoreManager {
       throw new Error('Vector store not initialized');
     }
 
-    const { k = 5, filter, fetchK = 20, lambda = 0.5 } = options;
+    const { k = 5, filter, fetchK = 20 } = options;
 
     // Use similarity search as fallback if maxMarginalRelevanceSearch is not available
     if (this.vectorStore.maxMarginalRelevanceSearch) {
       try {
-        // @ts-ignore - LangChain version compatibility issue
+        // @ts-expect-error - LangChain version compatibility issue
         return await this.vectorStore.maxMarginalRelevanceSearch(query, k, fetchK);
       } catch (error) {
         console.warn('MMR search failed, falling back to similarity search:', error);

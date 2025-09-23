@@ -6,12 +6,12 @@ export async function GET() {
     const supabase = await createServerClientSSR()
 
     // Try to check if core tables exist
-    const { data: profiles, error: profilesError } = await supabase
+    const { error: profilesError } = await supabase
       .from('profiles')
       .select('id')
       .limit(1)
 
-    const { data: papers, error: papersError } = await supabase
+    const { error: papersError } = await supabase
       .from('papers')
       .select('id')
       .limit(1)
@@ -30,7 +30,7 @@ export async function GET() {
         : `Database not ready. Missing tables: ${missingTables.join(', ')}`
     })
 
-  } catch (error) {
+  } catch {
     return errorResponse('Failed to check database status', 500)
   }
 }

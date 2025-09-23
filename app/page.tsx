@@ -1,25 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { UploadSection } from "@/frontend/components/UploadSection";
 import { RecentPapers } from "@/frontend/components/RecentPapers";
-import { StatsCard } from "@/frontend/components/StatsCard";
 import { ProfileDialog } from "@/frontend/components/ProfileDialog";
-import { FileText, MessageSquare, Clock, BookOpen, User, LogOut } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { FileText, MessageSquare, Clock, BookOpen, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDashboardStats, useRecentChats } from "@/lib/hooks/useApi";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Removed unused supabase client - using hooks instead
+
+interface DashboardStats {
+  papers: number;
+  chats: number;
+  pages: number;
+  hours: number;
+  papersTrend: string;
+  chatsTrend: string;
+  pagesTrend: string;
+  hoursTrend: string;
+}
 
 export default function Home() {
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const { data: stats, error, isLoading: loading } = useDashboardStats();
+  const { data: stats, isLoading: loading } = useDashboardStats() as { data: DashboardStats | undefined; isLoading: boolean };
 
   // Pre-load chat data in background
   useRecentChats();
@@ -137,6 +143,7 @@ export default function Home() {
             className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-gray-400 hover:text-gray-300 transition-colors group"
           >
             <span>Powered by</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="https://cdn.prod.website-files.com/684228174606b26ec8e3e29e/684b4952707b6e17b3ef79df_Logo.png"
               alt="DevSwarm"

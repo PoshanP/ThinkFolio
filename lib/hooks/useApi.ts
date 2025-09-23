@@ -113,8 +113,8 @@ async function fetchRecentChats(userId: string) {
     .order('created_at', { ascending: true });
 
   // Group messages by session
-  const messagesBySession = {};
-  (messages || []).forEach(msg => {
+  const messagesBySession: Record<string, any[]> = {};
+  (messages || []).forEach((msg: any) => {
     if (!messagesBySession[msg.session_id]) {
       messagesBySession[msg.session_id] = [];
     }

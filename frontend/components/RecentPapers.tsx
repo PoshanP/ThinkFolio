@@ -240,7 +240,7 @@ export function RecentPapers() {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            My Papers
+            My Documents
           </h2>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -261,10 +261,10 @@ export function RecentPapers() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              My Papers
+              My Documents
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              All your uploaded research papers
+              All your uploaded PDF documents
             </p>
           </div>
         </div>
@@ -285,10 +285,10 @@ export function RecentPapers() {
         <div className="p-12 text-center">
           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">
-            {searchTerm ? 'No papers found matching your search' : 'No papers uploaded yet'}
+            {searchTerm ? 'No documents found matching your search' : 'No documents uploaded yet'}
           </p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            {searchTerm ? 'Try a different search term' : 'Upload your first paper to get started'}
+            {searchTerm ? 'Try a different search term' : 'Upload your first document to get started'}
           </p>
         </div>
       ) : (

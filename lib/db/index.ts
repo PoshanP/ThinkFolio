@@ -131,8 +131,6 @@ export class DatabaseService {
 
   static async getConnectionStats() {
     try {
-      const _client = createAdminClient()
-
       // This would typically query pg_stat_activity in a real PostgreSQL setup
       // For Supabase, we'll return mock stats
       return {
@@ -150,8 +148,6 @@ export class DatabaseService {
 
   static async optimizeTable(table: string): Promise<void> {
     try {
-      const _client = createAdminClient()
-
       // In a real PostgreSQL setup, you would run VACUUM ANALYZE
       // This is a placeholder for Supabase
       logger.info({ table }, 'Table optimization requested')

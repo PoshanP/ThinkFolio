@@ -4,16 +4,16 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from '@langchain/openai';
-import * as crypto from 'crypto';
 
-interface ChunkMetadata {
+// Removed unused interface ChunkMetadata
+/*interface ChunkMetadata {
   paperId: string;
   pageNumber: number;
   chunkIndex: number;
   chunkType: string;
   source: string;
   title: string;
-}
+}*/
 
 interface ProcessingOptions {
   chunkSize?: number;
@@ -86,7 +86,7 @@ export class DocumentProcessor {
     paperId: string,
     filePath: string,
     fileType: string,
-    title: string
+    _title: string
   ): Promise<{ success: boolean; chunksCreated: number; error?: string }> {
     try {
       await this.updateProcessingStatus(paperId, 'processing');
@@ -143,7 +143,7 @@ export class DocumentProcessor {
       const { data: insertedChunks, error: chunkError } = await this.supabase
         .from('paper_chunks')
         .insert(
-          chunkData.map(({ metadata, ...chunk }) => chunk)
+          chunkData.map(({ ...chunk }) => chunk)
         )
         .select();
 

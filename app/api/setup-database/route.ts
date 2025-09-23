@@ -2,7 +2,7 @@ import { createServerClientSSR } from '@/lib/supabase/server'
 import { successResponse, errorResponse } from '@/lib/utils/api-response'
 import { NextRequest } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = await createServerClientSSR()
 
@@ -147,10 +147,10 @@ export async function POST(request: NextRequest) {
         const { error } = await supabase.rpc('exec_sql', { sql: query } as any)
         if (error) {
           // Try direct query if RPC doesn't work
-          const directResult = await (supabase as any).from('__temp__').select().limit(0)
+          await (supabase as any).from('__temp__').select().limit(0)
           await (supabase as any).rpc('sql', { query })
         }
-      } catch (e) {
+      } catch {
         console.log(`Query executed (might be expected): ${query.substring(0, 50)}...`)
       }
     }

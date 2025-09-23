@@ -173,7 +173,7 @@ export function UploadSection() {
         details: error?.details,
         stack: error?.stack
       });
-      alert(`Failed to upload paper: ${error?.message || 'Unknown error'}`);
+      alert(`Failed to upload document: ${error?.message || 'Unknown error'}`);
       setIsProcessing(false);
       setProcessingStatus("");
       setSelectedFile(null);

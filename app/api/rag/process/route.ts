@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     console.log(`Extracted text from PDF: ${pdfMetadata.textContent.length} characters`);
 
     // Clean content to avoid Unicode issues
-    let fileContent = pdfMetadata.textContent
+    const fileContent = pdfMetadata.textContent
       .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
       .replace(/\\/g, '\\\\') // Escape backslashes
       .replace(/"/g, '\\"'); // Escape quotes
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Insert chunks into database
     console.log(`Inserting ${chunkData.length} chunks into database...`);
-    const chunksToInsert = chunkData.map(({ metadata, ...chunk }) => chunk);
+    const chunksToInsert = chunkData.map(({ ...chunk }) => chunk);
 
     console.log('DEBUG: Sample chunk to insert:', chunksToInsert[0]);
     console.log('DEBUG: Total chunks to insert:', chunksToInsert.length);
@@ -160,80 +160,81 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function processExistingPaper(paperId: string, storagePath: string) {
-  try {
-    // Download the file from storage
-    const { data: fileData } = await supabase.storage
-      .from('papers')
-      .download(storagePath);
+// Removed unused function processExistingPaper
+// async function processExistingPaper(paperId: string, storagePath: string) {
+//   try {
+//     // Download the file from storage
+//     const { data: fileData } = await supabase.storage
+//       .from('papers')
+//       .download(storagePath);
 
-    if (!fileData) {
-      return NextResponse.json(
-        { error: 'Could not download file from storage' },
-        { status: 404 }
-      );
-    }
+//     if (!fileData) {
+//       return NextResponse.json(
+//         { error: 'Could not download file from storage' },
+//         { status: 404 }
+//       );
+//     }
 
-    // Convert to buffer for processing
-    const buffer = await fileData.arrayBuffer();
-    const tempFile = new File([buffer], 'paper.pdf', { type: 'application/pdf' });
-
-    // Create a temporary file path for processing
-    const tempPath = `/tmp/${paperId}.pdf`;
-
-    // Write buffer to temp file for processing
-    const fs = await import('fs/promises');
-    await fs.writeFile(tempPath, Buffer.from(buffer));
-
-    // Process using the document processor
-    const result = await processor.processDocument(
-      paperId,
-      tempPath,
-      'pdf',
-      `Paper ${paperId}`
-    );
-
-    // Clean up temp file
-    try {
-      await fs.unlink(tempPath);
-    } catch (cleanupError) {
-      console.log('Could not clean up temp file:', cleanupError);
-    }
-
-    if (result.success) {
-      await supabase
-        .from('document_processing_status')
-        .upsert({
-          paper_id: paperId,
-          status: 'completed',
-          total_chunks: result.chunksCreated,
-          processed_chunks: result.chunksCreated,
-          completed_at: new Date().toISOString(),
-        });
-
-      return NextResponse.json({
-        success: true,
-        message: `Document processed successfully. Created ${result.chunksCreated} chunks.`,
-        chunksCreated: result.chunksCreated,
-      });
-    } else {
-      throw new Error(result.error);
-    }
-  } catch (error: any) {
-    await supabase
-      .from('document_processing_status')
-      .upsert({
-        paper_id: paperId,
-        status: 'failed',
-        error_message: error.message,
-      });
-
-    return NextResponse.json(
-      { error: 'Failed to process existing paper', details: error.message },
-      { status: 500 }
-    );
-  }
-}
+//     // Convert to buffer for processing
+//     const buffer = await fileData.arrayBuffer();
+//     const tempFile = new File([buffer], 'paper.pdf', { type: 'application/pdf' });
+//
+//     // Create a temporary file path for processing
+//     const tempPath = `/tmp/${paperId}.pdf`;
+//
+//     // Write buffer to temp file for processing
+//     const fs = await import('fs/promises');
+//     await fs.writeFile(tempPath, Buffer.from(buffer));
+//
+//     // Process using the document processor
+//     const result = await processor.processDocument(
+//       paperId,
+//       tempPath,
+//       'pdf',
+//       `Paper ${paperId}`
+//     );
+//
+//     // Clean up temp file
+//     try {
+//       await fs.unlink(tempPath);
+//     } catch (cleanupError) {
+//       console.log('Could not clean up temp file:', cleanupError);
+//     }
+//
+//     if (result.success) {
+//       await supabase
+//         .from('document_processing_status')
+//         .upsert({
+//           paper_id: paperId,
+//           status: 'completed',
+//           total_chunks: result.chunksCreated,
+//           processed_chunks: result.chunksCreated,
+//           completed_at: new Date().toISOString(),
+//         });
+//
+//       return NextResponse.json({
+//         success: true,
+//         message: `Document processed successfully. Created ${result.chunksCreated} chunks.`,
+//         chunksCreated: result.chunksCreated,
+//       });
+//     } else {
+//       throw new Error(result.error);
+//     }
+//   } catch (error: any) {
+//     await supabase
+//       .from('document_processing_status')
+//       .upsert({
+//         paper_id: paperId,
+//         status: 'failed',
+//         error_message: error.message,
+//       });
+//
+//     return NextResponse.json(
+//       { error: 'Failed to process existing paper', details: error.message },
+//       { status: 500 }
+//     );
+//   }
+// }
 
 export async function GET(request: NextRequest) {
   try {

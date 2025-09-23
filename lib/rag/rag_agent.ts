@@ -139,7 +139,7 @@ export class RAGAgent {
     paperId?: string,
     options?: RetrievalOptions
   ): Promise<QueryResult> {
-    const startTime = Date.now();
+    // const startTime = Date.now(); // Removed unused variable
 
     try {
       if (paperId) {
@@ -197,7 +197,7 @@ export class RAGAgent {
     paperId?: string,
     options?: RetrievalOptions
   ): Promise<QueryResult> {
-    const startTime = Date.now();
+    // const startTime = Date.now(); // Removed unused variable
 
     try {
       if (paperId) {

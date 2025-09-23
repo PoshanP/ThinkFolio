@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus,
   MessageSquare,
   Send,
-  Bot,
-  User,
   Search,
   Trash2,
   Loader2,
@@ -43,12 +41,11 @@ interface Message {
   metadata?: any;
 }
 
-export default function ChatNewPage() {
+function ChatNewPageContent() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingSession, setLoadingSession] = useState(false);
@@ -126,6 +123,7 @@ export default function ChatNewPage() {
     if (sessionId) {
       loadSession(sessionId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionsFetched]);
 
   useEffect(() => {
@@ -624,5 +622,13 @@ export default function ChatNewPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ChatNewPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <ChatNewPageContent />
+    </Suspense>
   );
 }
