@@ -123,12 +123,7 @@ export default function Home() {
 
         {/* Upload Section */}
         <div className="space-y-6">
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-            <h3 className="text-sm font-medium text-white mb-3">
-              Upload Document
-            </h3>
-            <UploadSection />
-          </div>
+          <UploadSection />
         </div>
       </div>
 

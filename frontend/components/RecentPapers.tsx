@@ -20,15 +20,28 @@ interface Paper {
   status?: string;
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  paper?: {
+    title: string;
+  };
+}
+
 export function RecentPapers() {
   const [papers, setPapers] = useState<Paper[]>([]);
+  const [recentChats, setRecentChats] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chatsLoading, setChatsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     fetchAllPapers();
+    fetchRecentChats();
   }, []);
 
   const fetchAllPapers = async () => {
@@ -73,6 +86,34 @@ export function RecentPapers() {
       console.error('Error fetching papers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRecentChats = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setChatsLoading(false);
+        return;
+      }
+
+      const { data: chatsData, error } = await supabase
+        .from('chat_sessions')
+        .select(`
+          *,
+          papers (title)
+        `)
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      setRecentChats(chatsData || []);
+    } catch (error) {
+      console.error('Error fetching recent chats:', error);
+    } finally {
+      setChatsLoading(false);
     }
   };
 
@@ -220,7 +261,7 @@ export function RecentPapers() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              My Papers ({papers.length})
+              My Papers
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               All your uploaded research papers
@@ -251,16 +292,19 @@ export function RecentPapers() {
           </p>
         </div>
       ) : (
-        <div className="max-h-96 overflow-y-auto">
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-800 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500" style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgb(75 85 99) rgb(31 41 55)'
+        }}>
+          <div className="flex gap-4 p-4 min-w-max">
             {filteredPapers.map((paper) => (
               <div
                 key={paper.id}
-                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
+                className="flex-shrink-0 w-72 p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
                 onClick={() => createChatSession(paper.id)}
               >
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 mt-1 relative">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 relative">
                     <FileText className="h-8 w-8 text-blue-400" />
                     {paper.chat_count && paper.chat_count > 0 && (
                       <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
@@ -270,41 +314,41 @@ export function RecentPapers() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors truncate">
                           {paper.title}
                         </h4>
-                        <div className="flex items-center mt-1 space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center mt-1 space-x-3 text-xs text-gray-500 dark:text-gray-400">
                           <span className="flex items-center">
                             <Clock className="h-3 w-3 mr-1" />
                             {formatDate(paper.created_at)}
                           </span>
                           <span>{paper.page_count} pages</span>
                         </div>
+                        <div className="mt-2">
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                              paper.status || 'processed'
+                            )}`}
+                          >
+                            {paper.status === 'completed' ? 'processed' : paper.status}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                            paper.status || 'processed'
-                          )}`}
-                        >
-                          {paper.status === 'completed' ? 'processed' : paper.status}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deletePaper(paper.id);
-                          }}
-                          disabled={deleting === paper.id}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400 disabled:opacity-50"
-                        >
-                          {deleting === paper.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePaper(paper.id);
+                        }}
+                        disabled={deleting === paper.id}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400 disabled:opacity-50 ml-2"
+                      >
+                        {deleting === paper.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -313,6 +357,66 @@ export function RecentPapers() {
           </div>
         </div>
       )}
+
+      {/* Recent Chats Section */}
+      <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6 pl-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Recent Chats
+          </h3>
+          {recentChats.length >= 5 && (
+            <button
+              onClick={() => router.push('/chat-new')}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Show all
+            </button>
+          )}
+        </div>
+
+        {chatsLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse flex items-center space-x-3">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-8"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+              </div>
+            ))}
+          </div>
+        ) : recentChats.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">No chat sessions yet</p>
+            <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+              Upload a paper and start chatting to see your conversations here
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {recentChats.map((chat) => (
+              <div
+                key={chat.id}
+                className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded cursor-pointer group transition-colors"
+                onClick={() => router.push(`/chat-new?session=${chat.id}`)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors truncate">
+                    {chat.title}
+                  </p>
+                  {chat.paper && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {chat.paper.title}
+                    </p>
+                  )}
+                </div>
+                <span className="text-xs text-gray-400 ml-3">
+                  {formatDate(chat.updated_at)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

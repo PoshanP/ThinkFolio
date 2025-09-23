@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, Link2, FileText, X, Loader2, Plus, CheckCircle } from "lucide-react";
+import { Upload, FileText, X, Loader2, Plus, CheckCircle } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
@@ -11,9 +11,8 @@ const supabase = createClient(
 );
 
 export function UploadSection() {
-  const [uploadType, setUploadType] = useState<"file" | "url">("file");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [url, setUrl] = useState("");
+  const [documentName, setDocumentName] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -22,8 +21,16 @@ export function UploadSection() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type === "application/pdf") {
+      // Check file size (5MB = 5 * 1024 * 1024 bytes)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert("File size exceeds 5MB limit. Please select a smaller PDF file.");
+        return;
+      }
       setSelectedFile(file);
-      handleSubmit(file);
+      // Auto-populate document name from filename (without extension)
+      const nameWithoutExtension = file.name.replace('.pdf', '');
+      setDocumentName(nameWithoutExtension);
     }
   };
 
@@ -42,25 +49,19 @@ export function UploadSection() {
       let paperTitle: string;
       let source: string;
 
-      if (uploadType === "file" && (file || selectedFile)) {
+      if (file || selectedFile) {
         fileToProcess = (file || selectedFile)!;
-        paperTitle = fileToProcess.name.replace('.pdf', '');
+        paperTitle = documentName || fileToProcess.name.replace('.pdf', '');
         source = 'file upload';
-      } else if (uploadType === "url" && url) {
-        // For URL uploads, we'd need to fetch the PDF first
-        setProcessingStatus("Fetching PDF from URL...");
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const urlParts = url.split('/');
-        paperTitle = urlParts[urlParts.length - 1].replace('.pdf', '') || 'Downloaded Paper';
-        fileToProcess = new File([blob], `${paperTitle}.pdf`, { type: 'application/pdf' });
-        source = url;
       } else {
-        throw new Error('No file or URL provided');
+        throw new Error('No file provided');
       }
 
       // Save paper to database first
       setProcessingStatus("Saving paper...");
+
+      // Get estimated page count from file size
+      const estimatedPageCount = await getPageCount(fileToProcess);
 
       const { data: paper, error: paperError } = await supabase
         .from('papers')
@@ -68,7 +69,7 @@ export function UploadSection() {
           user_id: user.id,
           title: paperTitle,
           source: source,
-          page_count: 1, // Will be updated after processing
+          page_count: estimatedPageCount, // Will be updated with actual count after processing
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -158,10 +159,10 @@ export function UploadSection() {
         // Continue anyway - user can ask questions manually
       }
 
-      // Redirect to chat with the new session
+      // Redirect to chat with the new session and paper ID for document-specific chat
       setProcessingStatus("Redirecting to chat...");
       setTimeout(() => {
-        router.push(`/chat-new?session=${session.id}`);
+        router.push(`/chat-new?session=${session.id}&paper=${paper.id}`);
       }, 500);
 
     } catch (error: any) {
@@ -176,24 +177,49 @@ export function UploadSection() {
       setIsProcessing(false);
       setProcessingStatus("");
       setSelectedFile(null);
-      setUrl("");
+      setDocumentName("");
     }
   };
 
-  // Helper function to estimate page count from PDF
+  // Function to estimate page count from PDF file size (will be updated with actual count after processing)
   const getPageCount = async (file: File): Promise<number> => {
-    // This is a simple estimation based on file size
-    // In production, you'd use a PDF library to get actual page count
-    const sizeInMB = file.size / (1024 * 1024);
-    return Math.max(1, Math.round(sizeInMB * 10)); // Rough estimate: 100KB per page
+    // Better estimation algorithm based on typical PDF characteristics
+    const sizeInKB = file.size / 1024;
+
+    // Improved estimation based on PDF file size patterns:
+    // - Text-heavy PDFs: ~30-50KB per page
+    // - Image-heavy PDFs: ~100-300KB per page
+    // - Mixed content: ~75KB per page (average)
+
+    let estimatedPages;
+    if (sizeInKB < 100) {
+      // Very small file, likely 1-2 pages
+      estimatedPages = Math.max(1, Math.round(sizeInKB / 50));
+    } else if (sizeInKB < 500) {
+      // Small to medium file
+      estimatedPages = Math.round(sizeInKB / 75);
+    } else {
+      // Larger file, likely more images
+      estimatedPages = Math.round(sizeInKB / 100);
+    }
+
+    return Math.max(1, estimatedPages);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type === "application/pdf") {
+      // Check file size (5MB = 5 * 1024 * 1024 bytes)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert("File size exceeds 5MB limit. Please select a smaller PDF file.");
+        return;
+      }
       setSelectedFile(file);
-      handleSubmit(file);
+      // Auto-populate document name from filename (without extension)
+      const nameWithoutExtension = file.name.replace('.pdf', '');
+      setDocumentName(nameWithoutExtension);
     }
   };
 
@@ -205,35 +231,9 @@ export function UploadSection() {
     <div className="sticky top-6">
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Quick Upload
+          Upload Document
         </h3>
 
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setUploadType("file")}
-            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              uploadType === "file"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            <span>PDF</span>
-          </button>
-          <button
-            onClick={() => setUploadType("url")}
-            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              uploadType === "url"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
-            }`}
-          >
-            <Link2 className="h-4 w-4" />
-            <span>URL</span>
-          </button>
-        </div>
-
-        {uploadType === "file" ? (
           <div>
             <div
               onDrop={handleDrop}
@@ -262,14 +262,51 @@ export function UploadSection() {
                   </p>
                 </div>
               ) : selectedFile ? (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <FileText className="h-10 w-10 text-indigo-600 dark:text-indigo-400 mx-auto" />
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate px-2">
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate px-2">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Document Name
+                      </label>
+                      <input
+                        type="text"
+                        value={documentName}
+                        onChange={(e) => setDocumentName(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="Enter document name..."
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                      />
+                    </div>
+
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleSubmit(selectedFile)}
+                        disabled={!documentName.trim()}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Upload & Process
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setDocumentName("");
+                        }}
+                        className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -288,57 +325,11 @@ export function UploadSection() {
               )}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-              Max 50MB • PDF only
+              Max 5MB • PDF only
             </p>
           </div>
-        ) : (
-          <div>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://arxiv.org/pdf/..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-              onKeyPress={(e) => {
-                if (e.key === "Enter" && url) {
-                  handleSubmit();
-                }
-              }}
-            />
-            <button
-              onClick={() => handleSubmit()}
-              disabled={!url || isProcessing}
-              className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4" />
-                  <span>Upload</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </div>
 
-      <div className="mt-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-          Recent Uploads
-        </h4>
-        <div className="space-y-2">
-          {["Attention Is All...", "BERT: Pre-training...", "GPT-3: Language..."].map((title, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-xs">
-              <FileText className="h-3 w-3 text-gray-400" />
-              <span className="text-gray-600 dark:text-gray-400 truncate">{title}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

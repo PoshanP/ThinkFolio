@@ -137,6 +137,9 @@ export class DocumentProcessor {
         }
       }
 
+      console.log('DEBUG: Sample chunk to insert:', chunkData[0]);
+      console.log('DEBUG: Total chunks to insert:', chunkData.length);
+
       const { data: insertedChunks, error: chunkError } = await this.supabase
         .from('paper_chunks')
         .insert(
@@ -144,8 +147,25 @@ export class DocumentProcessor {
         )
         .select();
 
+      console.log('DEBUG: Insert result - data:', insertedChunks?.length, 'error:', chunkError);
+
       if (chunkError) {
+        console.error('CHUNK INSERT ERROR:', chunkError);
         throw new Error(`Failed to insert chunks: ${chunkError.message}`);
+      }
+
+      if (insertedChunks && insertedChunks.length > 0) {
+        console.log('DEBUG: Successfully inserted chunks:', insertedChunks.length);
+
+        // IMMEDIATE VERIFICATION: Check if data is actually in database
+        const { count: verifyCount, error: verifyError } = await this.supabase
+          .from('paper_chunks')
+          .select('*', { count: 'exact', head: true })
+          .eq('paper_id', paperId);
+
+        console.log('DEBUG: IMMEDIATE VERIFICATION - chunks in DB for this paper:', verifyCount, 'error:', verifyError);
+      } else {
+        console.error('DEBUG: NO CHUNKS WERE INSERTED - this is the problem!');
       }
 
       if (insertedChunks) {
@@ -160,6 +180,15 @@ export class DocumentProcessor {
 
         await this.supabase.from('paper_chunks_metadata').insert(metadataInserts);
       }
+
+      // Calculate actual page count from PDF documents
+      const pageCount = this.calculatePageCount(documents);
+
+      // Update the paper's page count in the database
+      await this.supabase
+        .from('papers')
+        .update({ page_count: pageCount })
+        .eq('id', paperId);
 
       await this.updateProcessingStatus(paperId, 'completed', allChunks.length);
 
@@ -224,6 +253,23 @@ export class DocumentProcessor {
     ];
 
     return citationPatterns.some(pattern => pattern.test(text));
+  }
+
+  private calculatePageCount(documents: Document[]): number {
+    // For PDFs with splitPages: true, each document represents a page
+    // We need to find the highest page number from metadata
+    let maxPage = 0;
+
+    for (const doc of documents) {
+      const pageNumber = doc.metadata?.page;
+      if (pageNumber && typeof pageNumber === 'number') {
+        maxPage = Math.max(maxPage, pageNumber);
+      }
+    }
+
+    // If we couldn't find page metadata, use document count as fallback
+    // (each document = one page when splitPages is true)
+    return maxPage > 0 ? maxPage : documents.length;
   }
 
   private async updateProcessingStatus(

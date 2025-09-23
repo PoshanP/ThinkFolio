@@ -49,6 +49,7 @@ export default function ChatNewPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingSessions, setLoadingSessions] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingSession, setLoadingSession] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -199,7 +200,10 @@ export default function ChatNewPage() {
   const loadSession = async (sessionId: string) => {
     if (currentSession?.id === sessionId) return;
 
+    // Clear messages immediately when switching sessions
+    setMessages([]);
     setLoadingSession(true);
+
     try {
       const { data: session, error: sessionError } = await supabase
         .from('chat_sessions')
@@ -252,23 +256,38 @@ export default function ChatNewPage() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || !currentSession || isLoading) return;
+    if (!input.trim() || !currentSession) return;
+
+    const sessionIsLoading = loadingSessions.has(currentSession.id);
+    if (sessionIsLoading) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const messageContent = input.trim();
+    const sessionIdAtStart = currentSession.id; // Capture session ID at start
+
     const userMessage: Message = {
       id: `temp-user-${Date.now()}`,
       content: messageContent,
       role: 'user',
       created_at: new Date().toISOString(),
-      session_id: currentSession.id
+      session_id: sessionIdAtStart
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Update messages cache first
+    setMessagesCache(prev => ({
+      ...prev,
+      [sessionIdAtStart]: [...(prev[sessionIdAtStart] || []), userMessage]
+    }));
+
+    // Only update messages if we're still on the same session
+    if (currentSession?.id === sessionIdAtStart) {
+      setMessages(prev => [...prev, userMessage]);
+    }
+
     setInput("");
-    setIsLoading(true);
+    setLoadingSessions(prev => new Set(prev).add(sessionIdAtStart));
 
     try {
       if (messages.length === 0) {
@@ -279,22 +298,28 @@ export default function ChatNewPage() {
             title: newTitle,
             updated_at: new Date().toISOString()
           })
-          .eq('id', currentSession.id);
+          .eq('id', sessionIdAtStart);
 
-        setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
-        setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, title: newTitle } : s));
+        // Only update UI if still on the same session
+        if (currentSession?.id === sessionIdAtStart) {
+          setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
+          setSessions(prev => prev.map(s => s.id === sessionIdAtStart ? { ...s, title: newTitle } : s));
+        }
       }
 
       let assistantContent = "";
 
-      if (currentSession.paper_id) {
+      // Use the session from when the request started
+      const sessionForRequest = sessions.find(s => s.id === sessionIdAtStart);
+
+      if (sessionForRequest?.paper_id) {
         const response = await fetch('/api/rag/query', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             question: messageContent,
-            paperId: currentSession.paper_id,
-            sessionId: currentSession.id,
+            paperId: sessionForRequest.paper_id,
+            sessionId: sessionIdAtStart,
             userId: user.id,
           }),
         });
@@ -314,15 +339,21 @@ export default function ChatNewPage() {
         content: assistantContent,
         role: 'assistant',
         created_at: new Date().toISOString(),
-        session_id: currentSession.id
+        session_id: sessionIdAtStart
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      // Only update messages if we're still on the same session
+      setCurrentSession(currentSessionAtUpdate => {
+        if (currentSessionAtUpdate?.id === sessionIdAtStart) {
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+        return currentSessionAtUpdate;
+      });
 
-      // Update cache with current messages + assistant message
+      // Always update cache regardless of current session
       setMessagesCache(prev => ({
         ...prev,
-        [currentSession.id]: [...messages, userMessage, assistantMessage]
+        [sessionIdAtStart]: [...(prev[sessionIdAtStart] || []), assistantMessage]
       }));
 
     } catch (error) {
@@ -332,11 +363,28 @@ export default function ChatNewPage() {
         content: "Sorry, I encountered an error. Please try again.",
         role: 'assistant',
         created_at: new Date().toISOString(),
-        session_id: currentSession.id
+        session_id: sessionIdAtStart
       };
-      setMessages(prev => [...prev, errorMessage]);
+
+      // Only update messages if we're still on the same session
+      setCurrentSession(currentSessionAtUpdate => {
+        if (currentSessionAtUpdate?.id === sessionIdAtStart) {
+          setMessages(prev => [...prev, errorMessage]);
+        }
+        return currentSessionAtUpdate;
+      });
+
+      // Always update cache regardless of current session
+      setMessagesCache(prev => ({
+        ...prev,
+        [sessionIdAtStart]: [...(prev[sessionIdAtStart] || []), errorMessage]
+      }));
     } finally {
-      setIsLoading(false);
+      setLoadingSessions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(sessionIdAtStart);
+        return newSet;
+      });
     }
   };
 
@@ -385,18 +433,20 @@ export default function ChatNewPage() {
           )}
         </div>
 
-        <div className="px-3 pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-white"
-            />
+        {!filterPaperId && (
+          <div className="px-3 pb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-white"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-2">
           {filteredSessions.map((session) => (
@@ -500,7 +550,7 @@ export default function ChatNewPage() {
                   </div>
                 ))}
 
-                {isLoading && (
+                {currentSession && loadingSessions.has(currentSession.id) && (
                   <div className="mb-8">
                     <div className="flex justify-start">
                       <div className="w-full max-w-4xl">
@@ -531,15 +581,15 @@ export default function ChatNewPage() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                     placeholder="Message ThinkFolio..."
-                    disabled={isLoading}
+                    disabled={currentSession ? loadingSessions.has(currentSession.id) : false}
                     className="flex-1 px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50"
                   />
                   <button
                     onClick={sendMessage}
-                    disabled={!input.trim() || isLoading}
+                    disabled={!input.trim() || (currentSession ? loadingSessions.has(currentSession.id) : false)}
                     className="px-4 py-3 bg-white hover:bg-gray-100 disabled:bg-gray-600 text-black rounded-lg transition-colors disabled:cursor-not-allowed"
                   >
-                    {isLoading ? (
+                    {currentSession && loadingSessions.has(currentSession.id) ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       <Send className="h-5 w-5" />

@@ -84,9 +84,9 @@ export class RAGChain {
 
     const formattedContext = this.formatDocuments(retrievedDocs);
 
-    // Simple conversation history - keep last 6 messages only
+    // Use full conversation history for complete context
     const conversationHistory = context?.sessionId
-      ? this.getConversationHistory(context.sessionId).slice(-6)
+      ? this.getConversationHistory(context.sessionId)
       : [];
 
     const prompt = ChatPromptTemplate.fromMessages([
@@ -209,9 +209,9 @@ export class RAGChain {
     options?: RetrievalOptions
   ): Promise<Document[]> {
     const defaultOptions: RetrievalOptions = {
-      k: 5,
+      k: 20,
       searchType: 'hybrid',
-      scoreThreshold: 0.7,
+      scoreThreshold: 0.1,
       ...options,
     };
 

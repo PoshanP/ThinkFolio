@@ -4,7 +4,6 @@ import { Document } from '@langchain/core/documents';
 import { SupabaseVectorStore } from '@langchain/community/vectorstores/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { ChromaClient } from 'chromadb';
-import { searchCache } from '../utils/cache';
 
 export interface VectorStoreConfig {
   type: 'chroma' | 'supabase';
@@ -38,7 +37,7 @@ export class VectorStoreManager {
     this.embeddings = new OpenAIEmbeddings({
       openAIApiKey: config.openaiApiKey,
       modelName: 'text-embedding-3-large',
-      dimensions: 1536,
+      dimensions: 3072,
     });
 
     if (config.type === 'supabase' && config.supabaseUrl && config.supabaseKey) {
@@ -96,7 +95,7 @@ export class VectorStoreManager {
     this.vectorStore = await SupabaseVectorStore.fromExistingIndex(this.embeddings, {
       client: this.supabaseClient,
       tableName: 'paper_chunks',
-      queryName: 'match_paper_chunks_optimized', // Use our optimized function!
+      queryName: 'match_paper_chunks_optimized',
       filter,
     });
   }
@@ -113,26 +112,63 @@ export class VectorStoreManager {
     query: string,
     options: RetrievalOptions = {}
   ): Promise<Document[]> {
-    if (!this.vectorStore) {
-      throw new Error('Vector store not initialized');
+    if (!this.supabaseClient) {
+      throw new Error('Supabase client not initialized');
     }
 
-    const { k = 5, filter, scoreThreshold = 0.7 } = options;
+    const { k = 20, filter } = options;
+    const paperId = filter?.paper_id;
 
-    // Simple cache check
-    const cacheKey = `sim_${query}_${k}_${scoreThreshold}`;
-    const cached = searchCache.get(cacheKey);
-    if (cached) return cached;
+    // FOR DEBUGGING: Return ALL chunks for this paper instead of similarity search
+    console.log('DEBUG: Getting ALL chunks for paper:', paperId);
 
-    const results = await this.vectorStore.similaritySearchWithScore(query, k, filter);
+    // First, let's see what papers exist in the database
+    const { data: allPapers, error: paperError } = await this.supabaseClient
+      .from('paper_chunks')
+      .select('paper_id')
+      .limit(10);
 
-    const filteredResults = results
-      .filter(([_, score]) => score >= scoreThreshold)
-      .map(([doc]) => doc);
+    console.log('DEBUG: Available paper IDs in database:', allPapers?.map(p => p.paper_id));
+    console.log('DEBUG: Paper query error:', paperError);
+    console.log('DEBUG: Using supabase URL:', this.supabaseClient.supabaseUrl);
 
-    // Cache results
-    searchCache.set(cacheKey, filteredResults);
-    return filteredResults;
+    // Also try getting the total count
+    const { count, error: countError } = await this.supabaseClient
+      .from('paper_chunks')
+      .select('*', { count: 'exact', head: true });
+
+    console.log('DEBUG: Total chunks in database:', count, 'count error:', countError);
+
+    const { data, error } = await this.supabaseClient
+      .from('paper_chunks')
+      .select('id, content, page_no, paper_id')
+      .eq('paper_id', paperId)
+      .limit(k);
+
+    if (error) {
+      console.error('Error fetching chunks:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    console.log('DEBUG: Found chunks:', data?.length || 0);
+
+    if (!data || data.length === 0) {
+      console.log('DEBUG: No chunks found for paper ID:', paperId);
+      return [];
+    }
+
+    // Convert to Document format
+    const documents = data.map(chunk => new Document({
+      pageContent: chunk.content,
+      metadata: {
+        id: chunk.id,
+        page_no: chunk.page_no,
+        paper_id: chunk.paper_id
+      }
+    }));
+
+    console.log('DEBUG: Returning documents:', documents.length);
+    return documents;
   }
 
   async maxMarginalRelevanceSearch(
@@ -165,14 +201,9 @@ export class VectorStoreManager {
   ): Promise<Document[]> {
     const { k = 5 } = options;
 
-    // Simple cache for hybrid search
-    const cacheKey = `hybrid_${query}_${paperId}_${k}`;
-    const cached = searchCache.get(cacheKey);
-    if (cached) return cached;
-
     // Run searches in parallel
     const [semanticResults, keywordResults] = await Promise.all([
-      this.similaritySearch(query, { ...options, k }),
+      this.similaritySearch(query, { ...options, k, filter: { paper_id: paperId } }),
       this.keywordSearch(query, paperId, { k: Math.ceil(k / 2) })
     ]);
 
@@ -196,7 +227,6 @@ export class VectorStoreManager {
       }
     }
 
-    searchCache.set(cacheKey, combined);
     return combined;
   }
 
