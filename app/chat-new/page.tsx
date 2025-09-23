@@ -11,7 +11,10 @@ import {
   User,
   Search,
   Trash2,
-  Loader2
+  Loader2,
+  Menu,
+  X,
+  ArrowLeft
 } from "lucide-react";
 
 const supabase = createClient(
@@ -40,7 +43,7 @@ interface Message {
   metadata?: any;
 }
 
-export default function ChatPage() {
+export default function ChatNewPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -48,17 +51,81 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingSession, setLoadingSession] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [filterPaperId, setFilterPaperId] = useState<string | null>(null);
+  const [sessionsFetched, setSessionsFetched] = useState(false);
+  const [messagesCache, setMessagesCache] = useState<{[sessionId: string]: Message[]}>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Override parent layout styling
   useEffect(() => {
-    fetchSessions();
+    // Set body styles
+    document.body.style.backgroundColor = "#111827";
+    document.body.style.margin = "0";
+    document.body.style.padding = "0";
+    document.body.style.height = "100vh";
+    document.body.style.overflow = "hidden";
+
+    // Hide navbar and main container
+    const navbar = document.querySelector('nav');
+    const main = document.querySelector('main');
+
+    if (navbar) {
+      navbar.style.display = 'none';
+    }
+
+    if (main) {
+      main.style.position = 'static';
+      main.style.margin = '0';
+      main.style.padding = '0';
+      main.style.maxWidth = 'none';
+      main.style.height = '100vh';
+      main.style.overflow = 'hidden';
+    }
+
+    return () => {
+      // Cleanup when leaving the page
+      document.body.style.backgroundColor = "";
+      document.body.style.margin = "";
+      document.body.style.padding = "";
+      document.body.style.height = "";
+      document.body.style.overflow = "";
+
+      if (navbar) {
+        navbar.style.display = '';
+      }
+
+      if (main) {
+        main.style.position = '';
+        main.style.margin = '';
+        main.style.padding = '';
+        main.style.maxWidth = '';
+        main.style.height = '';
+        main.style.overflow = '';
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Only fetch sessions if not already fetched
+    if (!sessionsFetched) {
+      fetchSessions();
+    }
+
     const sessionId = searchParams.get('session');
+    const paperId = searchParams.get('paper');
+
+    // Set filter if coming from a specific paper
+    if (paperId) {
+      setFilterPaperId(paperId);
+    }
+
     if (sessionId) {
       loadSession(sessionId);
     }
-  }, []);
+  }, [sessionsFetched]);
 
   useEffect(() => {
     scrollToBottom();
@@ -87,6 +154,7 @@ export default function ChatPage() {
 
       if (error) throw error;
       setSessions(sessionsData || []);
+      setSessionsFetched(true);
     } catch (error) {
       console.error('Error fetching sessions:', error);
     }
@@ -114,7 +182,7 @@ export default function ChatPage() {
       setCurrentSession(session);
       setMessages([]);
       setSessions(prev => [session, ...prev]);
-      router.push(`/chat?session=${session.id}`);
+      router.push(`/chat-new?session=${session.id}`);
     } catch (error) {
       console.error('Error creating session:', error);
     }
@@ -137,6 +205,13 @@ export default function ChatPage() {
       if (sessionError) throw sessionError;
       setCurrentSession(session);
 
+      // Check cache first
+      if (messagesCache[sessionId]) {
+        setMessages(messagesCache[sessionId]);
+        setLoadingSession(false);
+        return;
+      }
+
       const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
         .select('*')
@@ -152,6 +227,12 @@ export default function ChatPage() {
         created_at: msg.created_at,
         session_id: msg.session_id,
         metadata: msg.metadata
+      }));
+
+      // Cache the messages
+      setMessagesCache(prev => ({
+        ...prev,
+        [sessionId]: transformedMessages
       }));
 
       setMessages(transformedMessages);
@@ -228,7 +309,14 @@ export default function ChatPage() {
         session_id: currentSession.id
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      const updatedMessages = [...messages, userMessage, assistantMessage];
+      setMessages(updatedMessages);
+
+      // Update cache
+      setMessagesCache(prev => ({
+        ...prev,
+        [currentSession.id]: updatedMessages
+      }));
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -257,49 +345,64 @@ export default function ChatPage() {
       if (currentSession?.id === sessionId) {
         setCurrentSession(null);
         setMessages([]);
-        router.push('/chat');
+        router.push('/chat-new');
       }
     } catch (error) {
       console.error('Error deleting session:', error);
     }
   };
 
-  const filteredSessions = sessions.filter(session =>
-    session.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSessions = sessions.filter(session => {
+    // Filter by search term
+    const matchesSearch = session.title.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Filter by paper if specified
+    const matchesPaper = filterPaperId ? session.paper_id === filterPaperId : true;
+
+    return matchesSearch && matchesPaper;
+  });
 
   return (
-    <div className="flex w-full min-h-screen bg-gray-900">
+    <div className="fixed inset-0 z-50 flex h-screen bg-gray-900" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
       {/* Sidebar */}
-      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-700">
+      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden`}>
+        <div className="p-3 space-y-2">
           <button
             onClick={createNewSession}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm bg-white hover:bg-gray-100 text-black rounded-lg transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-white hover:bg-gray-100 text-black rounded-lg transition-colors"
           >
             <Plus className="h-4 w-4" />
-            New Chat
+            New chat
           </button>
+
+          {filterPaperId && (
+            <button
+              onClick={() => setFilterPaperId(null)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              Show All Chats
+            </button>
+          )}
         </div>
 
-        <div className="p-4">
+        <div className="px-3 pb-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+              placeholder="Search"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-white"
             />
           </div>
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 overflow-y-auto px-2">
           {filteredSessions.map((session) => (
             <div
               key={session.id}
-              className={`group mx-2 mb-1 rounded-lg cursor-pointer transition-colors ${
+              className={`group mb-1 rounded-lg cursor-pointer transition-colors ${
                 currentSession?.id === session.id
                   ? 'bg-gray-700'
                   : 'hover:bg-gray-700'
@@ -308,23 +411,18 @@ export default function ChatPage() {
                 if (currentSession?.id !== session.id) {
                   setCurrentSession(session);
                   loadSession(session.id);
-                  router.push(`/chat?session=${session.id}`);
+                  router.push(`/chat-new?session=${session.id}`);
                 }
               }}
             >
-              <div className="flex items-center justify-between p-3">
+              <div className="flex items-center justify-between px-3 py-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <span className="text-sm font-medium text-white truncate">
-                      {session.title}
-                    </span>
+                  <div className="text-sm text-white truncate font-medium">
+                    {session.title}
                   </div>
                   {session.paper && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-xs text-gray-400 truncate">
-                        📄 {session.paper.title}
-                      </span>
+                    <div className="text-xs text-gray-400 truncate mt-0.5">
+                      📄 {session.paper.title}
                     </div>
                   )}
                 </div>
@@ -343,107 +441,108 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Chat Area - Full Width */}
-      <div className="flex-1 flex flex-col w-full">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 bg-gray-900">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push('/')}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              {sidebarOpen ? <X className="h-5 w-5 text-white" /> : <Menu className="h-5 w-5 text-white" />}
+            </button>
+          </div>
+          <div className="text-sm font-medium text-white">
+            {currentSession?.title || 'ThinkFolio'}
+          </div>
+          <div className="w-20"></div> {/* Spacer for centering */}
+        </div>
+
         {loadingSession ? (
-          <div className="flex items-center justify-center min-h-screen">
+          <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
           </div>
         ) : currentSession ? (
           <>
             {/* Messages */}
-            <div className="flex-1 w-full px-6 py-4 pb-24">
-              {messages.map((message) => (
-                <div key={message.id} className="w-full mb-6">
-                  <div className="flex items-start gap-4 w-full">
-                    {message.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                        <Bot className="h-4 w-4 text-black" />
-                      </div>
-                    )}
-                    <div className="flex-1 w-full">
-                      <div
-                        className={`w-full rounded-lg px-4 py-3 ${
-                          message.role === 'user'
-                            ? 'bg-blue-600 text-white ml-auto max-w-2xl'
-                            : 'bg-gray-700 text-white'
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {message.content}
-                        </div>
-                      </div>
-                    </div>
-                    {message.role === 'user' && (
-                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                        <User className="h-4 w-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="w-full mb-6">
-                  <div className="flex items-start gap-4 w-full">
-                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                      <Bot className="h-4 w-4 text-black" />
-                    </div>
-                    <div className="bg-gray-700 rounded-lg px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-5xl mx-auto px-6 py-4">
+                {messages.map((message) => (
+                  <div key={message.id} className="mb-4">
+                    <div className="text-gray-300 text-sm leading-relaxed">
+                      <div className="whitespace-pre-wrap">
+                        {message.content}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                ))}
 
-              <div ref={messagesEndRef} />
+                {isLoading && (
+                  <div className="mb-4">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
             </div>
 
-            {/* Fixed Input at Bottom */}
-            <div className="fixed bottom-0 left-80 right-0 border-t border-gray-700 bg-gray-900 p-4">
-              <div className="flex gap-3 max-w-none">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                  placeholder="Type your message..."
-                  disabled={isLoading}
-                  className="flex-1 px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50"
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || isLoading}
-                  className="px-4 py-3 bg-white hover:bg-gray-100 disabled:bg-gray-600 text-black rounded-lg transition-colors disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Send className="h-5 w-5" />
-                  )}
-                </button>
+            {/* Input Area */}
+            <div className="border-t border-gray-700 bg-gray-900">
+              <div className="max-w-5xl mx-auto px-6 py-4">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                    placeholder="Message ThinkFolio..."
+                    disabled={isLoading}
+                    className="flex-1 px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!input.trim() || isLoading}
+                    className="px-4 py-3 bg-white hover:bg-gray-100 disabled:bg-gray-600 text-black rounded-lg transition-colors disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <MessageSquare className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center max-w-md">
+              <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-gray-400" />
+              </div>
               <h2 className="text-xl font-semibold text-white mb-2">
-                Welcome to ThinkFolio Chat
+                How can I help you today?
               </h2>
-              <p className="text-gray-400 mb-4">
-                Start a conversation or select an existing chat
+              <p className="text-gray-400 mb-6">
+                Start a new conversation or select an existing one from the sidebar.
               </p>
               <button
                 onClick={createNewSession}
                 className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors"
               >
-                Start New Chat
+                Start new chat
               </button>
             </div>
           </div>

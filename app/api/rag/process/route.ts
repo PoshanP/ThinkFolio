@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { PDFService } from '@/lib/services/pdf.service';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,14 +38,19 @@ export async function POST(request: NextRequest) {
     // Update processing status
     await supabase
       .from('document_processing_status')
-      .update({ status: 'processing', started_at: new Date().toISOString() })
+      .update({ status: 'processing', processing_started_at: new Date().toISOString() })
       .eq('paper_id', paperId);
 
     // Process PDF content for embedding
-    let fileContent = await file.text();
+    console.log('Processing PDF file...');
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Validate and extract PDF content
+    const pdfMetadata = await PDFService.extractMetadata(buffer);
+    console.log(`Extracted text from PDF: ${pdfMetadata.textContent.length} characters`);
 
     // Clean content to avoid Unicode issues
-    fileContent = fileContent
+    let fileContent = pdfMetadata.textContent
       .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
       .replace(/\\/g, '\\\\') // Escape backslashes
       .replace(/"/g, '\\"'); // Escape quotes
@@ -52,7 +58,8 @@ export async function POST(request: NextRequest) {
     // Split the content into chunks
     const chunks = await textSplitter.createDocuments([fileContent]);
 
-    // Generate embeddings and store chunks
+    // Generate embeddings and store chunks instantly
+    console.log(`Processing ${chunks.length} chunks...`);
     const chunkData = await Promise.all(
       chunks.map(async (chunk, index) => {
         const embedding = await embeddings.embedQuery(chunk.pageContent);
@@ -80,19 +87,28 @@ export async function POST(request: NextRequest) {
     );
 
     // Insert chunks into database
+    console.log(`Inserting ${chunkData.length} chunks into database...`);
+    const chunksToInsert = chunkData.map(({ metadata, ...chunk }) => chunk);
+
+    console.log('DEBUG: Sample chunk to insert:', chunksToInsert[0]);
+    console.log('DEBUG: Total chunks to insert:', chunksToInsert.length);
+
     const { data: insertedChunks, error: chunkError } = await supabase
       .from('paper_chunks')
-      .insert(
-        chunkData.map(({ metadata, ...chunk }) => chunk)
-      )
+      .insert(chunksToInsert)
       .select();
 
+    console.log('DEBUG: Insert result - data:', insertedChunks?.length || 0, 'error:', chunkError);
+
     if (chunkError) {
+      console.error('DEBUG: Chunk insertion error details:', chunkError);
       throw new Error(`Failed to insert chunks: ${chunkError.message}`);
     }
 
+    console.log('DEBUG: Successfully inserted chunks:', insertedChunks?.length || 0);
+
     // Store metadata
-    if (insertedChunks) {
+    if (insertedChunks && insertedChunks.length > 0) {
       const metadataInserts = insertedChunks.map((chunk: any, index: number) => ({
         chunk_id: chunk.id,
         chunk_index: index,
@@ -110,8 +126,8 @@ export async function POST(request: NextRequest) {
       .from('document_processing_status')
       .update({
         status: 'completed',
-        chunks_created: chunks.length,
-        completed_at: new Date().toISOString()
+        total_chunks: chunks.length,
+        processing_completed_at: new Date().toISOString()
       })
       .eq('paper_id', paperId);
 
@@ -131,8 +147,8 @@ export async function POST(request: NextRequest) {
         .from('document_processing_status')
         .update({
           status: 'failed',
-          error: error.message,
-          completed_at: new Date().toISOString()
+          error_message: error.message,
+          processing_completed_at: new Date().toISOString()
         })
         .eq('paper_id', paperId);
     }

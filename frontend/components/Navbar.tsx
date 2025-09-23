@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, MessageSquare, Library, User, LogOut, LogIn } from "lucide-react";
+import { FileText, MessageSquare, User, LogOut, LogIn } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -40,19 +40,11 @@ export function Navbar() {
             {isAuthenticated && (
               <div className="hidden md:flex items-center space-x-6">
                 <Link
-                  href="/papers"
-                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                >
-                  <Library className="h-4 w-4" />
-                  <span>My Papers</span>
-                </Link>
-
-                <Link
-                  href="/chat"
+                  href="/chat-new"
                   className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  <span>Chat Sessions</span>
+                  <span>Chat</span>
                 </Link>
               </div>
             )}

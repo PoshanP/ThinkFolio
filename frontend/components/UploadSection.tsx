@@ -59,112 +59,56 @@ export function UploadSection() {
         throw new Error('No file or URL provided');
       }
 
-      // Upload to Supabase Storage
-      setProcessingStatus("Storing PDF...");
-      const fileExt = 'pdf';
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Save paper to database first
+      setProcessingStatus("Saving paper...");
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('papers')
-        .upload(fileName, fileToProcess, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        if (uploadError.message?.includes('not found')) {
-          throw new Error('Storage bucket not configured. Please run setup-storage.sql in Supabase SQL editor.');
-        }
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      // Extract basic metadata
-      const pageCount = await getPageCount(fileToProcess);
-
-      // Create paper record in database
-      setProcessingStatus("Creating paper record...");
-      const { data: paper, error: dbError } = await supabase
+      const { data: paper, error: paperError } = await supabase
         .from('papers')
         .insert({
+          user_id: user.id,
           title: paperTitle,
           source: source,
-          page_count: pageCount,
-          user_id: user.id,
-          storage_path: fileName,
+          page_count: 1, // Will be updated after processing
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .select()
         .single();
 
-      if (dbError) throw dbError;
+      if (paperError) throw paperError;
 
-      // Create processing status record
-      await supabase
-        .from('document_processing_status')
-        .insert({
-          paper_id: paper.id,
-          status: 'processing',
-          started_at: new Date().toISOString()
-        });
-
-      // Process document for RAG (chunking and embedding)
-      setProcessingStatus("Processing document for AI chat...");
+      // Process PDF using the working RAG endpoint
+      setProcessingStatus("Processing PDF...");
 
       const formData = new FormData();
       formData.append('file', fileToProcess);
       formData.append('paper_id', paper.id);
       formData.append('user_id', user.id);
 
-      try {
-        const processResponse = await fetch('/api/rag/process', {
-          method: 'POST',
-          body: formData,
-        });
+      const processResponse = await fetch('/api/rag/process', {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!processResponse.ok) {
-          const errorData = await processResponse.json();
-          console.error('Document processing failed:', errorData);
-          // Continue anyway - document is uploaded
-        }
-      } catch (processError) {
-        console.error('Document processing error:', processError);
-        // Continue anyway - document is uploaded
+      if (!processResponse.ok) {
+        const errorData = await processResponse.json();
+        throw new Error(`Processing failed: ${errorData.error || 'Unknown error'}`);
       }
 
-      // Generate summary
+      const processResult = await processResponse.json();
+
+      // Generate automatic summary
       setProcessingStatus("Generating summary...");
-      let summary = "Your paper has been uploaded successfully. Start asking questions about it!";
 
-      try {
-        console.log('Requesting summary for paper:', paper.id);
-        const summaryResponse = await fetch('/api/rag/summary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paper_id: paper.id }),
-        });
-
-        if (summaryResponse.ok) {
-          const summaryData = await summaryResponse.json();
-          console.log('Summary received:', summaryData.summary?.substring(0, 200) + '...');
-          summary = summaryData.summary;
-        } else {
-          console.error('Summary generation failed, using default message');
-        }
-      } catch (summaryError) {
-        console.error('Summary generation error:', summaryError);
-        // Use default summary
-      }
-
-      // Create initial chat session
+      // Create chat session first
       setProcessingStatus("Creating chat session...");
+
       const { data: session, error: sessionError } = await supabase
         .from('chat_sessions')
         .insert({
           paper_id: paper.id,
           user_id: user.id,
-          title: 'Initial Discussion',
+          title: paperTitle,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -173,94 +117,56 @@ export function UploadSection() {
 
       if (sessionError) throw sessionError;
 
-      // Add summary as first message from the system
-      const summaryMessage = summary;
-
-      console.log('Attempting to save message for session:', session.id);
-      console.log('User ID:', user.id);
-      console.log('Summary length:', summaryMessage.length);
-
-      // First, let's verify the session exists
-      const { data: sessionCheck } = await supabase
-        .from('chat_sessions')
-        .select('id')
-        .eq('id', session.id)
-        .single();
-
-      console.log('Session exists:', !!sessionCheck);
-
-      // Keep it simple - only required fields
-      const messageToInsert = {
-        session_id: session.id,
-        role: 'assistant' as const,
-        content: summaryMessage.substring(0, 10000) // Ensure not too long
-      };
-
-      console.log('Inserting message:', messageToInsert);
-
-      const { data: messageData, error: messageError } = await supabase
-        .from('chat_messages')
-        .insert(messageToInsert)
-        .select()
-        .single();
-
-      if (messageError) {
-        console.error('Failed to save summary message:', {
-          error: messageError,
-          message: messageError?.message,
-          details: messageError?.details,
-          hint: messageError?.hint,
-          code: messageError?.code
+      // Generate automatic summary using the RAG system
+      try {
+        const summaryResponse = await fetch('/api/rag/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: "Please provide a comprehensive summary of this paper including its main contributions, methodology, and key findings.",
+            paperId: paper.id,
+            sessionId: session.id,
+            userId: user.id,
+          }),
         });
 
-        // Try a simpler insert
-        console.log('Retrying with minimal fields...');
-        const simpleMessage = {
-          session_id: session.id,
-          role: 'assistant' as const,
-          content: 'Test message'
-        };
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
 
-        console.log('Retry message:', simpleMessage);
-
-        const { data: retryData, error: retryError } = await supabase
-          .from('chat_messages')
-          .insert(simpleMessage)
-          .select();
-
-        if (retryError) {
-          console.error('Retry also failed:', {
-            error: retryError,
-            message: retryError?.message,
-            details: retryError?.details,
-            hint: retryError?.hint
-          });
-        } else {
-          console.log('Test message saved!', retryData);
+          // Save the summary as the first message
+          await supabase
+            .from('chat_messages')
+            .insert({
+              session_id: session.id,
+              role: 'assistant',
+              content: summaryData.answer,
+              user_id: user.id,
+              created_at: new Date().toISOString(),
+              metadata: {
+                citations: summaryData.sources?.map((source: any) => ({
+                  page: source.metadata?.page || 0,
+                  text: source.content
+                })),
+                is_system_summary: true
+              }
+            });
         }
-      } else {
-        console.log('Summary message saved successfully:', messageData);
+      } catch (summaryError) {
+        console.log('Could not generate summary:', summaryError);
+        // Continue anyway - user can ask questions manually
       }
 
-      // Update processing status to completed
-      await supabase
-        .from('document_processing_status')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        .eq('paper_id', paper.id);
-
-      setProcessingStatus("Redirecting to chat...");
-
       // Redirect to chat with the new session
+      setProcessingStatus("Redirecting to chat...");
       setTimeout(() => {
-        router.push(`/chat/${paper.id}?session=${session.id}`);
+        router.push(`/chat-new?session=${session.id}`);
       }, 500);
 
     } catch (error: any) {
-      console.error('Error uploading paper:', error);
-      console.error('Error details:', {
+      console.error('DEBUG: ERROR occurred during upload process:', error);
+      console.error('DEBUG: Error details:', {
         message: error?.message,
         status: error?.status,
         details: error?.details,
