@@ -169,20 +169,28 @@ export default function ChatNewPage() {
         .from('chat_sessions')
         .insert({
           user_id: user.id,
-          title: 'New Chat',
-          paper_id: null,
+          title: filterPaperId ? 'New Document Chat' : 'New Chat',
+          paper_id: filterPaperId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating session:', error);
+        return;
+      }
 
       setCurrentSession(session);
       setMessages([]);
       setSessions(prev => [session, ...prev]);
-      router.push(`/chat-new?session=${session.id}`);
+
+      const urlParams = new URLSearchParams({ session: session.id });
+      if (filterPaperId) {
+        urlParams.set('paper', filterPaperId);
+      }
+      router.push(`/chat-new?${urlParams.toString()}`);
     } catch (error) {
       console.error('Error creating session:', error);
     }
@@ -309,13 +317,12 @@ export default function ChatNewPage() {
         session_id: currentSession.id
       };
 
-      const updatedMessages = [...messages, userMessage, assistantMessage];
-      setMessages(updatedMessages);
+      setMessages(prev => [...prev, assistantMessage]);
 
-      // Update cache
+      // Update cache with current messages + assistant message
       setMessagesCache(prev => ({
         ...prev,
-        [currentSession.id]: updatedMessages
+        [currentSession.id]: [...messages, userMessage, assistantMessage]
       }));
 
     } catch (error) {
@@ -367,20 +374,13 @@ export default function ChatNewPage() {
       {/* Sidebar */}
       <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden`}>
         <div className="p-3 space-y-2">
-          <button
-            onClick={createNewSession}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-white hover:bg-gray-100 text-black rounded-lg transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            New chat
-          </button>
-
           {filterPaperId && (
             <button
-              onClick={() => setFilterPaperId(null)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              onClick={createNewSession}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-white hover:bg-gray-100 text-black rounded-lg transition-colors"
             >
-              Show All Chats
+              <Plus className="h-4 w-4" />
+              New chat
             </button>
           )}
         </div>
@@ -475,21 +475,44 @@ export default function ChatNewPage() {
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-5xl mx-auto px-6 py-4">
                 {messages.map((message) => (
-                  <div key={message.id} className="mb-4">
-                    <div className="text-gray-300 text-sm leading-relaxed">
-                      <div className="whitespace-pre-wrap">
-                        {message.content}
+                  <div key={message.id} className="mb-8">
+                    {message.role === 'user' ? (
+                      <div className="flex justify-end">
+                        <div className="max-w-lg">
+                          <div className="bg-blue-600 text-white rounded-xl px-3 py-2 shadow-md">
+                            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                              {message.content}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex justify-start">
+                        <div className="w-full max-w-4xl">
+                          <div className="bg-transparent text-gray-100 rounded-lg px-2 py-3">
+                            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                              {message.content}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 
                 {isLoading && (
-                  <div className="mb-4">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="mb-8">
+                    <div className="flex justify-start">
+                      <div className="w-full max-w-4xl">
+                        <div className="bg-transparent text-gray-100 rounded-lg px-2 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            <span className="text-xs text-gray-400 ml-2">Thinking...</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -538,12 +561,14 @@ export default function ChatNewPage() {
               <p className="text-gray-400 mb-6">
                 Start a new conversation or select an existing one from the sidebar.
               </p>
-              <button
-                onClick={createNewSession}
-                className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                Start new chat
-              </button>
+              {filterPaperId && (
+                <button
+                  onClick={createNewSession}
+                  className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Start new document chat
+                </button>
+              )}
             </div>
           </div>
         )}
