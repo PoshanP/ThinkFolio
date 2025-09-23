@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/frontend/components/Navbar";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { DataProvider } from "@/lib/contexts/DataContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ThinkFolio - Research Paper Chat",
-  description: "Upload, analyze, and chat with research papers using AI",
+  title: "ThinkFolio - AI Document Chat",
+  description: "Upload, analyze, and chat with PDFs, books, and documents using AI",
 };
 
 export default function RootLayout({
@@ -18,12 +18,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-50 dark:bg-gray-900`}>
+      <body className={`${inter.className} bg-gray-900 text-white`}>
         <AuthProvider>
-          <Navbar />
-          <main className="container mx-auto px-4 py-8 max-w-7xl">
-            {children}
-          </main>
+          <DataProvider>
+            <div className="min-h-screen bg-gray-900">
+              <main className="container mx-auto px-6 py-6 max-w-7xl">
+                {children}
+              </main>
+            </div>
+          </DataProvider>
         </AuthProvider>
       </body>
     </html>

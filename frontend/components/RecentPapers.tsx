@@ -256,31 +256,30 @@ export function RecentPapers() {
             {filteredPapers.map((paper) => (
               <div
                 key={paper.id}
-                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
+                onClick={() => createChatSession(paper.id)}
               >
                 <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 mt-1">
-                    <FileText className="h-8 w-8 text-gray-400" />
+                  <div className="flex-shrink-0 mt-1 relative">
+                    <FileText className="h-8 w-8 text-blue-400" />
+                    {paper.chat_count && paper.chat_count > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+                        {paper.chat_count}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <button
-                          onClick={() => createChatSession(paper.id)}
-                          className="text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-left cursor-pointer"
-                        >
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">
                           {paper.title}
-                        </button>
+                        </h4>
                         <div className="flex items-center mt-1 space-x-4 text-xs text-gray-500 dark:text-gray-400">
                           <span className="flex items-center">
                             <Clock className="h-3 w-3 mr-1" />
                             {formatDate(paper.created_at)}
                           </span>
                           <span>{paper.page_count} pages</span>
-                          <span className="flex items-center">
-                            <MessageSquare className="h-3 w-3 mr-1" />
-                            {paper.chat_count} chats
-                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
@@ -292,7 +291,10 @@ export function RecentPapers() {
                           {paper.status === 'completed' ? 'processed' : paper.status}
                         </span>
                         <button
-                          onClick={() => deletePaper(paper.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deletePaper(paper.id);
+                          }}
                           disabled={deleting === paper.id}
                           className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400 disabled:opacity-50"
                         >
