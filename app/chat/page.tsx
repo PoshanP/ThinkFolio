@@ -1,65 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { MessageSquare, FileText, Clock, Search, ChevronRight } from "lucide-react";
+import { MessageSquare, FileText, Clock, Search, ChevronRight, Loader2 } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 
-const mockSessions = [
-  {
-    id: "1",
-    paperId: "1",
-    paperTitle: "Attention Is All You Need",
-    sessionTitle: "Understanding self-attention mechanism",
-    lastMessage: "The self-attention mechanism allows the model to attend to different positions...",
-    timestamp: new Date(),
-    messageCount: 12,
-  },
-  {
-    id: "2",
-    paperId: "1",
-    paperTitle: "Attention Is All You Need",
-    sessionTitle: "Multi-head attention explained",
-    lastMessage: "Multi-head attention allows the model to jointly attend to information...",
-    timestamp: new Date(Date.now() - 86400000),
-    messageCount: 8,
-  },
-  {
-    id: "3",
-    paperId: "2",
-    paperTitle: "BERT: Pre-training of Deep Bidirectional Transformers",
-    sessionTitle: "BERT architecture discussion",
-    lastMessage: "BERT uses bidirectional training to achieve deeper understanding...",
-    timestamp: new Date(Date.now() - 172800000),
-    messageCount: 15,
-  },
-  {
-    id: "4",
-    paperId: "3",
-    paperTitle: "GPT-3: Language Models are Few-Shot Learners",
-    sessionTitle: "Few-shot learning capabilities",
-    lastMessage: "GPT-3 demonstrates that scaling up language models greatly improves...",
-    timestamp: new Date(Date.now() - 259200000),
-    messageCount: 10,
-  },
-];
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+interface ChatSession {
+  id: string;
+  paper_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  paper?: {
+    title: string;
+  };
+  messages?: {
+    content: string;
+  }[];
+  message_count?: number;
+}
 
 export default function ChatSessionsPage() {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
 
-  const filteredSessions = mockSessions.filter(session =>
-    session.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.paperTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/auth/login");
+        return;
+      }
+
+      // Fetch chat sessions with paper details and message count
+      const { data: sessionsData, error } = await supabase
+        .from('chat_sessions')
+        .select(`
+          *,
+          papers!inner (title),
+          chat_messages (content)
+        `)
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Process sessions to include message count and last message
+      const processedSessions = (sessionsData || []).map(session => ({
+        ...session,
+        message_count: session.chat_messages?.length || 0,
+        last_message: session.chat_messages?.[session.chat_messages.length - 1]?.content || ''
+      }));
+
+      setSessions(processedSessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredSessions = sessions.filter(session =>
+    session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    session.paper?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (session.messages?.[session.messages.length - 1]?.content || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const groupedSessions = filteredSessions.reduce((groups, session) => {
-    const date = session.timestamp.toDateString();
+    const date = new Date(session.updated_at).toDateString();
     if (!groups[date]) {
       groups[date] = [];
     }
     groups[date].push(session);
     return groups;
-  }, {} as Record<string, typeof mockSessions>);
+  }, {} as Record<string, ChatSession[]>);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -97,7 +133,7 @@ export default function ChatSessionsPage() {
               {sessions.map((session) => (
                 <Link
                   key={session.id}
-                  href={`/chat/${session.paperId}`}
+                  href={`/chat/${session.paper_id}?session=${session.id}`}
                   className="block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors group"
                 >
                   <div className="flex items-start justify-between">
@@ -105,27 +141,29 @@ export default function ChatSessionsPage() {
                       <MessageSquare className="h-5 w-5 text-gray-400 mt-1" />
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-                          {session.sessionTitle}
+                          {session.title}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           <FileText className="h-3 w-3 text-gray-400" />
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {session.paperTitle}
+                            {session.paper?.title || 'Unknown Paper'}
                           </p>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
-                          {session.lastMessage}
-                        </p>
+                        {session.messages && session.messages.length > 0 && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+                            {session.messages[session.messages.length - 1].content}
+                          </p>
+                        )}
                         <div className="flex items-center gap-4 mt-3">
                           <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-500">
                             <Clock className="h-3 w-3" />
-                            {session.timestamp.toLocaleTimeString([], {
+                            {new Date(session.updated_at).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </span>
                           <span className="text-xs text-gray-500 dark:text-gray-500">
-                            {session.messageCount} messages
+                            {session.message_count || 0} messages
                           </span>
                         </div>
                       </div>

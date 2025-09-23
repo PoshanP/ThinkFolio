@@ -259,5 +259,113 @@ CREATE TRIGGER handle_updated_at_chat_sessions
 -- Create storage bucket for papers (uncomment if needed)
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('papers', 'papers', false) ON CONFLICT DO NOTHING;
 
+-- ========================================
+-- RAG-SPECIFIC TABLES
+-- ========================================
+
+-- Document processing status tracking
+CREATE TABLE IF NOT EXISTS document_processing_status (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paper_id UUID REFERENCES papers(id) ON DELETE CASCADE NOT NULL,
+    status TEXT CHECK (status IN ('pending', 'processing', 'completed', 'failed')) NOT NULL DEFAULT 'pending',
+    total_chunks INTEGER DEFAULT 0,
+    processed_chunks INTEGER DEFAULT 0,
+    error_message TEXT,
+    processing_started_at TIMESTAMP WITH TIME ZONE,
+    processing_completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enhanced paper chunks with metadata for better retrieval
+CREATE TABLE IF NOT EXISTS paper_chunks_metadata (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chunk_id UUID REFERENCES paper_chunks(id) ON DELETE CASCADE NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    chunk_type TEXT CHECK (chunk_type IN ('title', 'abstract', 'introduction', 'methodology', 'results', 'conclusion', 'references', 'body', 'figure_caption', 'table')) DEFAULT 'body',
+    semantic_density REAL,
+    keyword_count INTEGER DEFAULT 0,
+    has_equations BOOLEAN DEFAULT FALSE,
+    has_citations BOOLEAN DEFAULT FALSE,
+    language TEXT DEFAULT 'en',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- RAG query logs for performance monitoring
+CREATE TABLE IF NOT EXISTS rag_query_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    query TEXT NOT NULL,
+    retrieval_method TEXT CHECK (retrieval_method IN ('semantic', 'keyword', 'hybrid')) DEFAULT 'hybrid',
+    num_chunks_retrieved INTEGER,
+    retrieval_time_ms INTEGER,
+    total_time_ms INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Document collections for organizing papers
+CREATE TABLE IF NOT EXISTS document_collections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_public BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Many-to-many relationship between papers and collections
+CREATE TABLE IF NOT EXISTS collection_papers (
+    collection_id UUID REFERENCES document_collections(id) ON DELETE CASCADE NOT NULL,
+    paper_id UUID REFERENCES papers(id) ON DELETE CASCADE NOT NULL,
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    PRIMARY KEY (collection_id, paper_id)
+);
+
+-- Create additional indexes for RAG tables
+CREATE INDEX IF NOT EXISTS idx_document_processing_status_paper_id ON document_processing_status(paper_id);
+CREATE INDEX IF NOT EXISTS idx_document_processing_status_status ON document_processing_status(status);
+CREATE INDEX IF NOT EXISTS idx_paper_chunks_metadata_chunk_id ON paper_chunks_metadata(chunk_id);
+CREATE INDEX IF NOT EXISTS idx_rag_query_logs_user_id ON rag_query_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_document_collections_user_id ON document_collections(user_id);
+
+-- Enable RLS for RAG tables
+ALTER TABLE document_processing_status ENABLE ROW LEVEL SECURITY;
+ALTER TABLE paper_chunks_metadata ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rag_query_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE collection_papers ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for document_processing_status
+CREATE POLICY "Users can view processing status of their papers" ON document_processing_status
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM papers
+            WHERE papers.id = document_processing_status.paper_id
+            AND papers.user_id = auth.uid()
+        )
+    );
+
+-- RLS Policies for RAG query logs
+CREATE POLICY "Users can view their own query logs" ON rag_query_logs
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own query logs" ON rag_query_logs
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- RLS Policies for document collections
+CREATE POLICY "Users can manage their own collections" ON document_collections
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Add triggers for updated_at on RAG tables
+CREATE TRIGGER handle_updated_at_document_processing_status
+    BEFORE UPDATE ON document_processing_status
+    FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at_document_collections
+    BEFORE UPDATE ON document_collections
+    FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
 -- Success message
-SELECT 'Database setup completed successfully!' as result;
+SELECT 'Database setup completed successfully with RAG tables!' as result;

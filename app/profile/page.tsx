@@ -1,168 +1,167 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Calendar, FileText, MessageSquare, Save, Camera, TrendingUp, Clock, BarChart3 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User, Mail, Calendar, FileText, MessageSquare, Save, Camera, Loader2, LogOut } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 
-interface UserProfile {
-  id: string;
-  email: string;
-  name: string;
-  bio?: string;
-  avatar_url?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface UserStats {
-  totalPapers: number;
-  totalChats: number;
-  totalMessages: number;
-  totalPages: number;
-  hoursUsed: number;
-  avgChatLength: number;
-  recentActivity: {
-    papersThisWeek: number;
-    chatsThisWeek: number;
-    messagesThisWeek: number;
-  };
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState({
+    papers: 0,
+    chats: 0,
+    joinedDate: ""
+  });
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    fetchProfile();
-    fetchStats();
+    fetchUserData();
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/user/profile');
-      if (!response.ok) {
-        if (response.status === 401) {
-          window.location.href = '/auth/login';
-          return;
+      // Get current user
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !currentUser) {
+        router.push("/auth/login");
+        return;
+      }
+
+      setUser(currentUser);
+      setEmail(currentUser.email || "");
+
+      // Fetch profile data
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (profileData) {
+        setProfile(profileData);
+        setName(profileData.name || currentUser.user_metadata?.full_name || "");
+        setBio(profileData.bio || "");
+      } else {
+        // Create profile if it doesn't exist
+        const newProfile = {
+          id: currentUser.id,
+          email: currentUser.email,
+          name: currentUser.user_metadata?.full_name || "",
+          bio: "",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        const { data: createdProfile } = await supabase
+          .from('profiles')
+          .insert(newProfile)
+          .select()
+          .single();
+
+        if (createdProfile) {
+          setProfile(createdProfile);
+          setName(createdProfile.name || "");
         }
-        throw new Error('Failed to fetch profile');
       }
 
-      const data = await response.json();
-      setProfile(data.data);
-      setName(data.data.name || '');
-      setBio(data.data.bio || '');
+      // Fetch user stats
+      const { count: papersCount } = await supabase
+        .from('papers')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', currentUser.id);
+
+      const { count: chatsCount } = await supabase
+        .from('chat_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', currentUser.id);
+
+      setStats({
+        papers: papersCount || 0,
+        chats: chatsCount || 0,
+        joinedDate: new Date(currentUser.created_at).toLocaleDateString()
+      });
+
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setError('Failed to load profile');
+      console.error('Error fetching user data:', error);
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/user/stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+      setLoading(false);
     }
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    setError(null);
-
+    setSaving(true);
     try {
-      const response = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          bio: bio.trim() || null,
-        }),
-      });
+      if (!user) return;
 
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name,
+          bio,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
-      const data = await response.json();
-      setProfile(data.data);
+      if (error) throw error;
+
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
-      setError('Failed to update profile');
+      alert('Failed to update profile');
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  const formatMemberSince = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long'
-    });
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/auth/login");
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Profile
-        </h1>
-        <div className="animate-pulse space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-start gap-6">
-              <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-              <div className="flex-1 space-y-4">
-                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
   }
 
-  if (error && !profile) {
+  if (!user) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Profile
-        </h1>
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg">
-          {error}
-        </div>
+      <div className="text-center py-12">
+        <p className="text-gray-500">Please log in to view your profile</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-        Profile
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          Profile
+        </h1>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </button>
+      </div>
 
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Profile Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-start gap-6">
           <div className="relative">
@@ -170,8 +169,8 @@ export default function ProfilePage() {
               {profile?.avatar_url ? (
                 <img
                   src={profile.avatar_url}
-                  alt={profile.name}
-                  className="w-24 h-24 rounded-full object-cover"
+                  alt="Profile"
+                  className="w-full h-full rounded-full object-cover"
                 />
               ) : (
                 <User className="h-12 w-12 text-gray-400" />
@@ -195,15 +194,18 @@ export default function ProfilePage() {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               ) : (
-                <p className="text-gray-900 dark:text-white">{profile?.name || 'No name set'}</p>
+                <p className="text-gray-900 dark:text-white">{name || "Not set"}</p>
               )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email Address
+                Email
               </label>
-              <p className="text-gray-900 dark:text-white">{profile?.email}</p>
+              <p className="text-gray-900 dark:text-white flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gray-400" />
+                {email}
+              </p>
             </div>
 
             <div>
@@ -215,35 +217,37 @@ export default function ProfilePage() {
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   rows={3}
-                  placeholder="Tell us about yourself..."
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Tell us about yourself..."
                 />
               ) : (
                 <p className="text-gray-900 dark:text-white">
-                  {profile?.bio || 'No bio added yet'}
+                  {bio || "No bio added yet"}
                 </p>
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               {isEditing ? (
                 <>
                   <button
                     onClick={handleSave}
-                    disabled={isSaving}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
                   >
-                    <Save className="h-4 w-4" />
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     onClick={() => {
                       setIsEditing(false);
-                      setName(profile?.name || '');
-                      setBio(profile?.bio || '');
-                      setError(null);
+                      setName(profile?.name || "");
+                      setBio(profile?.bio || "");
                     }}
-                    disabled={isSaving}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
@@ -262,101 +266,55 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Member Since</span>
-            <Calendar className="h-4 w-4 text-gray-400" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {stats.papers}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Papers Uploaded
+              </p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {profile ? formatMemberSince(profile.created_at) : '...'}
-          </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Papers Uploaded</span>
-            <FileText className="h-4 w-4 text-gray-400" />
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <MessageSquare className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {stats.chats}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Chat Sessions
+              </p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {stats?.totalPapers || 0}
-          </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Total Chats</span>
-            <MessageSquare className="h-4 w-4 text-gray-400" />
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">
+                {stats.joinedDate}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Member Since
+              </p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {stats?.totalChats || 0}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Hours Used</span>
-            <Clock className="h-4 w-4 text-gray-400" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {stats?.hoursUsed || 0}h
-          </p>
         </div>
       </div>
-
-      {/* Detailed Stats */}
-      {stats && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Usage Statistics
-            </h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Total Messages</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.totalMessages}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Total Pages</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.totalPages}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Avg Chat Length</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.avgChatLength} msgs</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              This Week
-            </h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Papers Added</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">
-                  +{stats.recentActivity.papersThisWeek}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Chats Started</span>
-                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                  +{stats.recentActivity.chatsThisWeek}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Messages Sent</span>
-                <span className="font-semibold text-purple-600 dark:text-purple-400">
-                  +{stats.recentActivity.messagesThisWeek}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

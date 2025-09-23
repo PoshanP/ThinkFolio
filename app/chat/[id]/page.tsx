@@ -2,10 +2,11 @@
 
 import { ChatInterface } from "@/frontend/components/ChatInterface";
 import { PaperSidebar } from "@/frontend/components/PaperSidebar";
-import { useState } from "react";
+import { useState, use } from "react";
 import { Menu, X } from "lucide-react";
 
-export default function ChatPage({ params }: { params: { id: string } }) {
+export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
@@ -22,11 +23,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 fixed lg:relative w-80 h-full transition-transform duration-300 z-40`}
       >
-        <PaperSidebar paperId={params.id} />
+        <PaperSidebar paperId={resolvedParams.id} />
       </div>
 
       <div className="flex-1 flex flex-col">
-        <ChatInterface paperId={params.id} />
+        <ChatInterface paperId={resolvedParams.id} />
       </div>
     </div>
   );

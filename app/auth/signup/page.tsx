@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, User, Loader2, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Mail, Lock, User, Loader2, FileText } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -18,50 +24,54 @@ export default function SignupPage() {
     setIsLoading(true);
     setError("");
 
-    // Basic validation
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // Sign up with Supabase
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            name: name, // Add both for compatibility
+          },
         },
-        credentials: 'include', // Important for session cookies
-        body: JSON.stringify({
-          fullName: name.trim(), // Fix: use fullName to match the schema
-          email: email.trim(),
-          password: password
-        }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Successfully signed up - wait a moment for session to be established
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 100);
-      } else {
-        // Handle specific error messages
-        let errorMessage = data.error || 'Failed to create account';
-        if (errorMessage.includes('already registered')) {
-          errorMessage = 'An account with this email already exists. Please try logging in instead.';
-        } else if (errorMessage.includes('email')) {
-          errorMessage = 'Please enter a valid email address.';
-        } else if (errorMessage.includes('password')) {
-          errorMessage = 'Password must be at least 6 characters long.';
-        }
-        setError(errorMessage);
+      if (signUpError) {
+        throw signUpError;
       }
-    } catch (error) {
-      console.error('Signup error:', error);
-      setError('An error occurred. Please try again.');
-    } finally {
+
+      if (data.user) {
+        // Create or update profile with the name
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: data.user.email,
+            name: name,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'id'
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+
+        // Check if email confirmation is required
+        if (data.user.email_confirmed_at) {
+          // Email is confirmed, redirect to dashboard
+          router.push("/");
+        } else {
+          // Email confirmation required
+          setError("Please check your email to confirm your account before logging in.");
+          setIsLoading(false);
+        }
+      }
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      setError(err.message || "Failed to create account. Please try again.");
       setIsLoading(false);
     }
   };
@@ -85,27 +95,27 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>{error}</span>
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+              {error}
             </div>
           )}
 
           <div className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Full name
+                Full Name
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   id="name"
                   type="text"
+                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 disabled:opacity-50"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="John Doe"
                 />
               </div>
@@ -113,18 +123,19 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email address
+                Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   id="email"
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 disabled:opacity-50"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="you@example.com"
                 />
               </div>
@@ -135,60 +146,68 @@ export default function SignupPage() {
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   id="password"
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 disabled:opacity-50"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="••••••••"
                   minLength={6}
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Password must be at least 6 characters
+                Must be at least 6 characters
               </p>
             </div>
           </div>
 
+          <div className="flex items-center">
+            <input
+              id="terms"
+              type="checkbox"
+              required
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label htmlFor="terms" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              I agree to the{" "}
+              <Link href="#" className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+                Terms and Conditions
+              </Link>
+            </label>
+          </div>
+
           <button
             type="submit"
-            disabled={isLoading || !name.trim() || !email.trim() || !password}
-            className="w-full flex justify-center items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+            disabled={isLoading}
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Creating account...</span>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating account...
               </>
             ) : (
-              <span>Create account</span>
+              "Create Account"
             )}
           </button>
-        </form>
 
-        <div className="text-center space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Already have an account?{" "}
+          <div className="text-center text-sm">
+            <span className="text-gray-600 dark:text-gray-400">
+              Already have an account?{" "}
+            </span>
             <Link
               href="/auth/login"
-              className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+              className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               Sign in
             </Link>
-          </p>
-
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium mb-1">Demo Environment</p>
-              <p>You can create accounts for testing. No email verification required.</p>
-            </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
