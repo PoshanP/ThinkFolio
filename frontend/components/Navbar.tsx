@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FileText, MessageSquare, User, LogOut, LogIn } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -50,16 +51,19 @@ export function Navbar() {
             )}
           </div>
 
-          <div className="relative">
-            {isAuthenticated ? (
-              <>
-                <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <User className="h-5 w-5" />
-                  <span className="hidden md:block">Account</span>
-                </button>
+          <div className="flex items-center space-x-4">
+            <ThemeToggle />
+
+            <div className="relative">
+              {isAuthenticated ? (
+                <>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <User className="h-5 w-5" />
+                    <span className="hidden md:block">Account</span>
+                  </button>
 
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
@@ -97,6 +101,7 @@ export function Navbar() {
                 </Link>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
