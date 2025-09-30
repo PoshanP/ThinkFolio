@@ -14,6 +14,7 @@ import {
   X,
   ArrowLeft
 } from "lucide-react";
+import { ExportChatButton } from "@/frontend/components/ExportChatButton";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -514,7 +515,17 @@ function ChatNewPageContent() {
           <div className="text-sm font-medium text-white">
             {currentSession?.title || 'ThinkFolio'}
           </div>
-          <div className="w-20"></div> {/* Spacer for centering */}
+          <div className="flex items-center gap-2">
+            {currentSession && (
+              <ExportChatButton
+                sessionId={currentSession.id}
+                sessionTitle={currentSession.title}
+                paperTitle={currentSession.paper?.title}
+                sessionDate={currentSession.created_at}
+                messages={messages}
+              />
+            )}
+          </div>
         </div>
 
         {loadingSession ? (
