@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Bookmark, Trash2, Loader2, FileText, Calendar, ArrowLeft } from "lucide-react";
+import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -173,48 +174,51 @@ export default function HighlightsPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gray-900">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-900 dark:text-white" />
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-900 overflow-y-auto">
+    <div className="fixed inset-0 bg-white dark:bg-gray-900 overflow-y-auto">
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Header with Back Button */}
+        {/* Header with Back Button and Theme Toggle */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={() => router.push('/')}
-              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 text-white" />
-            </button>
-            <div className="flex items-center gap-3">
-              <Bookmark className="h-7 w-7 text-white" />
-              <h1 className="text-2xl font-semibold text-white">
-                Saved Highlights
-              </h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.push('/')}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-900 dark:text-white" />
+              </button>
+              <div className="flex items-center gap-3">
+                <Bookmark className="h-7 w-7 text-gray-900 dark:text-white" />
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  Saved Highlights
+                </h1>
+              </div>
             </div>
+            <ThemeToggle />
           </div>
-          <p className="text-gray-400 text-sm ml-14">
+          <p className="text-gray-600 dark:text-gray-400 text-sm ml-14">
             Your saved quotes and key passages from research papers
           </p>
         </div>
 
         {highlights.length === 0 ? (
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-12 text-center">
-            <Bookmark className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-12 text-center">
+            <Bookmark className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               No highlights yet
             </h2>
-            <p className="text-gray-400 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Start highlighting important passages in your paper chats to save them here.
             </p>
             <button
               onClick={() => router.push('/chat-new')}
-              className="px-6 py-3 bg-white hover:bg-gray-100 text-black rounded-lg transition-colors"
+              className="px-6 py-3 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black rounded-lg transition-colors"
             >
               Go to Chat
             </button>
@@ -222,35 +226,35 @@ export default function HighlightsPage() {
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedHighlights).map(([paperId, { paperTitle, highlights: paperHighlights }]) => (
-              <div key={paperId} className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+              <div key={paperId} className="bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
                 <button
                   onClick={() => goToPaperChat(paperId)}
-                  className="w-full px-6 py-4 border-b border-gray-700 hover:bg-gray-700/50 transition-colors text-left"
+                  className="w-full px-6 py-4 border-b border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-white" />
-                    <h2 className="text-lg font-semibold text-white hover:text-blue-400 transition-colors">
+                    <FileText className="h-5 w-5 text-gray-900 dark:text-white" />
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                       {paperTitle}
                     </h2>
-                    <span className="ml-auto text-sm text-gray-400">
+                    <span className="ml-auto text-sm text-gray-600 dark:text-gray-400">
                       {paperHighlights.length} {paperHighlights.length === 1 ? 'highlight' : 'highlights'}
                     </span>
                   </div>
                 </button>
 
-                <div className="divide-y divide-gray-700">
+                <div className="divide-y divide-gray-300 dark:divide-gray-700">
                   {paperHighlights.map((highlight) => (
                     <div
                       key={highlight.id}
-                      className="p-6 hover:bg-gray-700/50 transition-colors"
+                      className="p-6 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
-                          <blockquote className="text-gray-100 italic border-l-4 border-blue-500 pl-4 mb-3">
+                          <blockquote className="text-gray-900 dark:text-gray-100 italic border-l-4 border-blue-500 dark:border-blue-500 pl-4 mb-3">
                             "{highlight.highlighted_text}"
                           </blockquote>
 
-                          <div className="flex items-center gap-4 text-sm text-gray-400">
+                          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
                               {formatDate(highlight.created_at)}
@@ -263,7 +267,7 @@ export default function HighlightsPage() {
                           </div>
 
                           {highlight.notes && (
-                            <div className="mt-3 text-sm text-gray-300">
+                            <div className="mt-3 text-sm text-gray-800 dark:text-gray-300">
                               <strong>Notes:</strong> {highlight.notes}
                             </div>
                           )}
@@ -272,7 +276,7 @@ export default function HighlightsPage() {
                         <button
                           onClick={() => deleteHighlight(highlight.id)}
                           disabled={deleting === highlight.id}
-                          className="p-2 hover:bg-gray-600 text-red-400 hover:text-red-300 rounded-lg transition-colors disabled:opacity-50"
+                          className="p-2 hover:bg-gray-300 dark:hover:bg-gray-600 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded-lg transition-colors disabled:opacity-50"
                         >
                           {deleting === highlight.id ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
