@@ -4,6 +4,7 @@ import { useState } from "react";
 import { UploadSection } from "@/frontend/components/UploadSection";
 import { RecentPapers } from "@/frontend/components/RecentPapers";
 import { ProfileDialog } from "@/frontend/components/ProfileDialog";
+import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { FileText, MessageSquare, Clock, BookOpen, User, Bookmark } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -39,10 +40,10 @@ export default function Home() {
             onClick={() => router.push('/')}
             className="text-left hover:opacity-80 transition-opacity"
           >
-            <h1 className="text-2xl font-semibold text-white">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
               ThinkFolio
             </h1>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               AI-powered document analysis and chat
             </p>
           </button>
@@ -50,10 +51,12 @@ export default function Home() {
 
         {/* Actions */}
         <div className="flex items-center space-x-4">
+          <ThemeToggle />
+
           <Link
             href="/chat-new"
             prefetch={true}
-            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors"
           >
             <MessageSquare className="h-4 w-4" />
             <span>Chats</span>
@@ -69,7 +72,7 @@ export default function Home() {
 
           <button
             onClick={() => setIsProfileOpen(true)}
-            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors"
           >
             <User className="h-4 w-4" />
             <span>Account</span>
@@ -79,51 +82,51 @@ export default function Home() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-white">
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                 {loading ? "..." : stats?.papers || 0}
               </p>
-              <p className="text-xs text-gray-400">Documents</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Documents</p>
             </div>
-            <FileText className="h-4 w-4 text-gray-400" />
+            <FileText className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-white">
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                 {loading ? "..." : stats?.chats || 0}
               </p>
-              <p className="text-xs text-gray-400">Chats</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Chats</p>
             </div>
-            <MessageSquare className="h-4 w-4 text-gray-400" />
+            <MessageSquare className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-white">
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                 {loading ? "..." : stats?.hours || 0}
               </p>
-              <p className="text-xs text-gray-400">Hours</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Hours</p>
             </div>
-            <Clock className="h-4 w-4 text-gray-400" />
+            <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-white">
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                 {loading ? "..." : stats?.pages || 0}
               </p>
-              <p className="text-xs text-gray-400">Pages</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Pages</p>
             </div>
-            <BookOpen className="h-4 w-4 text-gray-400" />
+            <BookOpen className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
         </div>
       </div>
@@ -142,13 +145,13 @@ export default function Home() {
       </div>
 
       {/* Powered by DevSwarm */}
-      <div className="mt-12 pt-8 border-t border-gray-700">
+      <div className="mt-12 pt-8 border-t border-gray-300 dark:border-gray-700">
         <div className="text-center">
           <a
             href="https://devswarm.ai/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-gray-400 hover:text-gray-300 transition-colors group"
+            className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors group"
           >
             <span>Powered by</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
