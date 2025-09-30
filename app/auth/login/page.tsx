@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Loader2, FileText } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
+import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,6 +49,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-12">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
