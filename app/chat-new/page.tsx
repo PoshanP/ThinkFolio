@@ -14,6 +14,8 @@ import {
   X,
   ArrowLeft
 } from "lucide-react";
+import { ExportChatButton } from "@/frontend/components/ExportChatButton";
+import { HighlightableText } from "@/frontend/components/HighlightableText";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,6 +55,7 @@ function ChatNewPageContent() {
   const [filterPaperId, setFilterPaperId] = useState<string | null>(null);
   const [sessionsFetched, setSessionsFetched] = useState(false);
   const [messagesCache, setMessagesCache] = useState<{[sessionId: string]: Message[]}>({});
+  const [savingHighlight, setSavingHighlight] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageCounter = useRef(0); // Counter for unique message IDs
   const router = useRouter();
@@ -409,6 +412,44 @@ function ChatNewPageContent() {
     }
   };
 
+  const handleSaveHighlight = async (text: string, pageNo?: number) => {
+    if (!currentSession?.paper_id) {
+      alert('Cannot save highlight: No paper associated with this chat');
+      return;
+    }
+
+    setSavingHighlight(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('Please log in to save highlights');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('saved_highlights')
+        .insert({
+          user_id: user.id,
+          paper_id: currentSession.paper_id,
+          highlighted_text: text,
+          page_no: pageNo || null,
+        });
+
+      if (error) {
+        console.error('Error saving highlight:', error);
+        throw error;
+      }
+
+      alert('✓ Quote saved to highlights!');
+    } catch (error) {
+      console.error('Error saving highlight:', error);
+      alert('Failed to save highlight. Please try again.');
+    } finally {
+      setSavingHighlight(false);
+    }
+  };
+
   const filteredSessions = sessions.filter(session => {
     // Filter by search term
     const matchesSearch = session.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -514,7 +555,17 @@ function ChatNewPageContent() {
           <div className="text-sm font-medium text-white">
             {currentSession?.title || 'ThinkFolio'}
           </div>
-          <div className="w-20"></div> {/* Spacer for centering */}
+          <div className="flex items-center gap-2">
+            {currentSession && (
+              <ExportChatButton
+                sessionId={currentSession.id}
+                sessionTitle={currentSession.title}
+                paperTitle={currentSession.paper?.title}
+                sessionDate={currentSession.created_at}
+                messages={messages}
+              />
+            )}
+          </div>
         </div>
 
         {loadingSession ? (
@@ -542,9 +593,13 @@ function ChatNewPageContent() {
                       <div className="flex justify-start">
                         <div className="w-full max-w-4xl">
                           <div className="bg-transparent text-gray-100 rounded-lg px-2 py-3">
-                            <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                              {message.content}
-                            </div>
+                            <HighlightableText
+                              text={message.content}
+                              messageId={message.id}
+                              paperId={currentSession?.paper_id || undefined}
+                              onSave={handleSaveHighlight}
+                              className="whitespace-pre-wrap text-sm leading-relaxed"
+                            />
                           </div>
                         </div>
                       </div>
