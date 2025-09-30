@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, FileText, X, Loader2, Plus, CheckCircle } from "lucide-react";
+import { Upload, FileText, X, Loader2, Plus, CheckCircle, Link2 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
@@ -10,9 +10,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+type UploadMode = 'file' | 'url';
+
 export function UploadSection() {
+  const [uploadMode, setUploadMode] = useState<UploadMode>('file');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentName, setDocumentName] = useState<string>("");
+  const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [validatingUrl, setValidatingUrl] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -227,6 +232,153 @@ export function UploadSection() {
     e.preventDefault();
   };
 
+  const validateUrl = async (url: string): Promise<boolean> => {
+    if (!url) return false;
+
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleUrlSubmit = async () => {
+    if (!pdfUrl || !documentName.trim()) return;
+
+    setIsProcessing(true);
+    setProcessingStatus("Validating URL...");
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const isValid = await validateUrl(pdfUrl);
+      if (!isValid) {
+        alert("Please enter a valid URL");
+        setIsProcessing(false);
+        setProcessingStatus("");
+        return;
+      }
+
+      // Save paper to database first
+      setProcessingStatus("Saving paper...");
+
+      const { data: paper, error: paperError } = await supabase
+        .from('papers')
+        .insert({
+          user_id: user.id,
+          title: documentName,
+          source: pdfUrl,
+          page_count: 1, // Will be updated after processing
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (paperError) throw paperError;
+
+      // Process PDF using URL upload endpoint
+      setProcessingStatus("Downloading and processing PDF...");
+
+      const response = await fetch('/api/papers/upload-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: pdfUrl,
+          title: documentName,
+          userId: user.id,
+          paperId: paper.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        // Delete the paper record if processing fails
+        await supabase.from('papers').delete().eq('id', paper.id);
+        throw new Error(errorData.error || 'Failed to process URL');
+      }
+
+      // Create chat session
+      setProcessingStatus("Creating chat session...");
+
+      const { data: session, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .insert({
+          paper_id: paper.id,
+          user_id: user.id,
+          title: documentName,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Generate automatic summary
+      try {
+        const summaryResponse = await fetch('/api/rag/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: "Please provide a comprehensive summary of this paper including its main contributions, methodology, and key findings.",
+            paperId: paper.id,
+            sessionId: session.id,
+            userId: user.id,
+          }),
+        });
+
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
+
+          // Save the summary as the first message
+          await supabase
+            .from('chat_messages')
+            .insert({
+              session_id: session.id,
+              role: 'assistant',
+              content: summaryData.answer,
+              user_id: user.id,
+              created_at: new Date().toISOString(),
+              metadata: {
+                citations: summaryData.sources?.map((source: any) => ({
+                  page: source.metadata?.page || 0,
+                  text: source.content
+                })),
+                is_system_summary: true
+              }
+            });
+        }
+      } catch (summaryError) {
+        console.log('Could not generate summary:', summaryError);
+        // Continue anyway - user can ask questions manually
+      }
+
+      // Redirect to chat
+      setProcessingStatus("Redirecting to chat...");
+      setTimeout(() => {
+        router.push(`/chat-new?session=${session.id}&paper=${paper.id}`);
+      }, 500);
+
+    } catch (error: any) {
+      console.error('URL upload error:', error);
+      alert(`Failed to upload document: ${error?.message || 'Unknown error'}`);
+      setIsProcessing(false);
+      setProcessingStatus("");
+      setPdfUrl("");
+      setDocumentName("");
+    }
+  };
+
   return (
     <div className="sticky top-6">
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -234,6 +386,43 @@ export function UploadSection() {
           Upload Document
         </h3>
 
+        {/* Mode Toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => {
+              setUploadMode('file');
+              setPdfUrl("");
+              setDocumentName("");
+            }}
+            disabled={isProcessing}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              uploadMode === 'file'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Upload className="h-4 w-4 inline mr-2" />
+            File
+          </button>
+          <button
+            onClick={() => {
+              setUploadMode('url');
+              setSelectedFile(null);
+              setDocumentName("");
+            }}
+            disabled={isProcessing}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              uploadMode === 'url'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Link2 className="h-4 w-4 inline mr-2" />
+            URL
+          </button>
+        </div>
+
+        {uploadMode === 'file' ? (
           <div>
             <div
               onDrop={handleDrop}
@@ -328,6 +517,64 @@ export function UploadSection() {
               Max 5MB • PDF only
             </p>
           </div>
+        ) : (
+          <div>
+            {isProcessing ? (
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+                <div className="space-y-3">
+                  <Loader2 className="h-10 w-10 text-indigo-600 dark:text-indigo-400 mx-auto animate-spin" />
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {processingStatus || "Processing..."}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    This may take a few moments...
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    PDF URL
+                  </label>
+                  <input
+                    type="url"
+                    value={pdfUrl}
+                    onChange={(e) => setPdfUrl(e.target.value)}
+                    placeholder="https://example.com/document.pdf"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                    disabled={isProcessing}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Document Name
+                  </label>
+                  <input
+                    type="text"
+                    value={documentName}
+                    onChange={(e) => setDocumentName(e.target.value)}
+                    placeholder="Enter document name..."
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                    disabled={isProcessing}
+                  />
+                </div>
+
+                <button
+                  onClick={handleUrlSubmit}
+                  disabled={!pdfUrl.trim() || !documentName.trim() || isProcessing}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Upload from URL
+                </button>
+              </div>
+            )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+              Max 10MB • PDF only
+            </p>
+          </div>
+        )}
       </div>
 
     </div>
