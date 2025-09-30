@@ -54,6 +54,7 @@ function ChatNewPageContent() {
   const [sessionsFetched, setSessionsFetched] = useState(false);
   const [messagesCache, setMessagesCache] = useState<{[sessionId: string]: Message[]}>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageCounter = useRef(0); // Counter for unique message IDs
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -266,22 +267,23 @@ function ChatNewPageContent() {
     const sessionIdAtStart = currentSession.id; // Capture session ID at start
 
     const userMessage: Message = {
-      id: `temp-user-${Date.now()}`,
+      id: `temp-user-${Date.now()}-${messageCounter.current++}`,
       content: messageContent,
       role: 'user',
       created_at: new Date().toISOString(),
       session_id: sessionIdAtStart
     };
 
-    // Update messages cache first
+    // Update cache first
+    const updatedCacheWithUser = [...(messagesCache[sessionIdAtStart] || []), userMessage];
     setMessagesCache(prev => ({
       ...prev,
-      [sessionIdAtStart]: [...(prev[sessionIdAtStart] || []), userMessage]
+      [sessionIdAtStart]: updatedCacheWithUser
     }));
 
-    // Only update messages if we're still on the same session
+    // Only update messages if we're still on the same session - read from cache
     if (currentSession?.id === sessionIdAtStart) {
-      setMessages(prev => [...prev, userMessage]);
+      setMessages(updatedCacheWithUser);
     }
 
     setInput("");
@@ -333,50 +335,52 @@ function ChatNewPageContent() {
       }
 
       const assistantMessage: Message = {
-        id: `temp-assistant-${Date.now()}`,
+        id: `temp-assistant-${Date.now()}-${messageCounter.current++}`,
         content: assistantContent,
         role: 'assistant',
         created_at: new Date().toISOString(),
         session_id: sessionIdAtStart
       };
 
-      // Only update messages if we're still on the same session
+      // Update cache first
+      const updatedCacheWithAssistant = [...updatedCacheWithUser, assistantMessage];
+      setMessagesCache(prev => ({
+        ...prev,
+        [sessionIdAtStart]: updatedCacheWithAssistant
+      }));
+
+      // Only update messages if we're still on the same session - read from cache
       setCurrentSession(currentSessionAtUpdate => {
         if (currentSessionAtUpdate?.id === sessionIdAtStart) {
-          setMessages(prev => [...prev, assistantMessage]);
+          setMessages(updatedCacheWithAssistant);
         }
         return currentSessionAtUpdate;
       });
 
-      // Always update cache regardless of current session
-      setMessagesCache(prev => ({
-        ...prev,
-        [sessionIdAtStart]: [...(prev[sessionIdAtStart] || []), assistantMessage]
-      }));
-
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
-        id: `temp-error-${Date.now()}`,
+        id: `temp-error-${Date.now()}-${messageCounter.current++}`,
         content: "Sorry, I encountered an error. Please try again.",
         role: 'assistant',
         created_at: new Date().toISOString(),
         session_id: sessionIdAtStart
       };
 
-      // Only update messages if we're still on the same session
+      // Update cache first
+      const updatedCacheWithError = [...updatedCacheWithUser, errorMessage];
+      setMessagesCache(prev => ({
+        ...prev,
+        [sessionIdAtStart]: updatedCacheWithError
+      }));
+
+      // Only update messages if we're still on the same session - read from cache
       setCurrentSession(currentSessionAtUpdate => {
         if (currentSessionAtUpdate?.id === sessionIdAtStart) {
-          setMessages(prev => [...prev, errorMessage]);
+          setMessages(updatedCacheWithError);
         }
         return currentSessionAtUpdate;
       });
-
-      // Always update cache regardless of current session
-      setMessagesCache(prev => ({
-        ...prev,
-        [sessionIdAtStart]: [...(prev[sessionIdAtStart] || []), errorMessage]
-      }));
     } finally {
       setLoadingSessions(prev => {
         const newSet = new Set(prev);
