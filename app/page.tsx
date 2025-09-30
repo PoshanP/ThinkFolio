@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UploadSection } from "@/frontend/components/UploadSection";
 import { RecentPapers } from "@/frontend/components/RecentPapers";
 import { ProfileDialog } from "@/frontend/components/ProfileDialog";
-import { FileText, MessageSquare, Clock, BookOpen, User } from "lucide-react";
+import { FileText, MessageSquare, Clock, BookOpen, User, Bookmark } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDashboardStats, useRecentChats } from "@/lib/hooks/useApi";
@@ -57,6 +57,14 @@ export default function Home() {
           >
             <MessageSquare className="h-4 w-4" />
             <span>Chats</span>
+          </Link>
+
+          <Link
+            href="/highlights"
+            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+          >
+            <Bookmark className="h-4 w-4" />
+            <span>Highlights</span>
           </Link>
 
           <button
