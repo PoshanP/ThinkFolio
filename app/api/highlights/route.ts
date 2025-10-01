@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         highlighted_text: highlightedText,
         page_no: pageNo || null,
         notes: notes || null,
-      })
+      } as any)
       .select()
       .single()
 
