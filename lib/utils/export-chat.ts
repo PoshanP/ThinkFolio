@@ -113,7 +113,7 @@ export async function exportChatAsPDF(data: ExportChatData): Promise<void> {
   yPosition += 10;
 
   // Messages
-  data.messages.forEach((message, index) => {
+  data.messages.forEach((message) => {
     // Add separator line
     checkNewPage(15);
     pdf.setDrawColor(200, 200, 200);
@@ -165,7 +165,7 @@ export async function exportChatAsTXT(data: ExportChatData): Promise<void> {
   content += '='.repeat(80) + '\n\n';
 
   // Messages
-  data.messages.forEach((message, index) => {
+  data.messages.forEach((message) => {
     const roleLabel = message.role === 'user' ? 'YOU' : 'ASSISTANT';
 
     content += `${'-'.repeat(80)}\n`;

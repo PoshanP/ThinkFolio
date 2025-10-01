@@ -56,7 +56,6 @@ function ChatNewPageContent() {
   const [filterPaperId, setFilterPaperId] = useState<string | null>(null);
   const [sessionsFetched, setSessionsFetched] = useState(false);
   const [messagesCache, setMessagesCache] = useState<{[sessionId: string]: Message[]}>({});
-  const [savingHighlight, setSavingHighlight] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageCounter = useRef(0); // Counter for unique message IDs
   const router = useRouter();
@@ -419,8 +418,6 @@ function ChatNewPageContent() {
       return;
     }
 
-    setSavingHighlight(true);
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -446,8 +443,6 @@ function ChatNewPageContent() {
     } catch (error) {
       console.error('Error saving highlight:', error);
       alert('Failed to save highlight. Please try again.');
-    } finally {
-      setSavingHighlight(false);
     }
   };
 
