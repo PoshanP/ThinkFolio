@@ -89,7 +89,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadTheme();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Listen to system theme changes

@@ -9,9 +9,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate URL format
-    let validUrl: URL
     try {
-      validUrl = new URL(url)
+      new URL(url)
     } catch {
       return Response.json({ error: 'Invalid URL format' }, { status: 400 })
     }
@@ -107,21 +106,6 @@ export async function POST(request: NextRequest) {
     console.error('Upload URL error:', error)
     return Response.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
-}
-
-function getPageCount(sizeInBytes: number): number {
-  const sizeInKB = sizeInBytes / 1024
-
-  let estimatedPages
-  if (sizeInKB < 100) {
-    estimatedPages = Math.max(1, Math.round(sizeInKB / 50))
-  } else if (sizeInKB < 500) {
-    estimatedPages = Math.round(sizeInKB / 75)
-  } else {
-    estimatedPages = Math.round(sizeInKB / 100)
-  }
-
-  return Math.max(1, estimatedPages)
 }
 
 export const runtime = 'nodejs'

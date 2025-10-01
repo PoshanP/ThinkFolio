@@ -40,6 +40,7 @@ export default function HighlightsPage() {
 
   useEffect(() => {
     fetchHighlights();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchHighlights = async () => {
@@ -251,7 +252,7 @@ export default function HighlightsPage() {
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
                           <blockquote className="text-gray-900 dark:text-gray-100 italic border-l-4 border-blue-500 dark:border-blue-500 pl-4 mb-3">
-                            "{highlight.highlighted_text}"
+                            &quot;{highlight.highlighted_text}&quot;
                           </blockquote>
 
                           <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
