@@ -2,14 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { User, Mail, Save, Loader2, LogOut, X } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { useProfileData } from "@/lib/hooks/useApi";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -23,6 +18,7 @@ interface ProfileData {
 }
 
 export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
+  const supabase = useSupabase();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [isEditing, setIsEditing] = useState(false);

@@ -1,11 +1,8 @@
 import useSWR from 'swr';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/hooks/useSupabase';
 import { useEffect, useState } from 'react';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = getSupabaseClient();
 
 // Generic fetcher function for SWR
 const fetcher = async (key: string) => {
