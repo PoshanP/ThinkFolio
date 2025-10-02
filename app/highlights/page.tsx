@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Bookmark, Trash2, Loader2, FileText, Calendar, ArrowLeft } from "lucide-react";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -201,7 +200,6 @@ export default function HighlightsPage() {
                 </h1>
               </div>
             </div>
-            <ThemeToggle />
           </div>
           <p className="text-gray-600 dark:text-gray-400 text-sm ml-14">
             Your saved quotes and key passages from research papers

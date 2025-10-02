@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { ExportChatButton } from "@/frontend/components/ExportChatButton";
 import { HighlightableText } from "@/frontend/components/HighlightableText";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -561,7 +560,6 @@ function ChatNewPageContent() {
                 messages={messages}
               />
             )}
-            <ThemeToggle />
           </div>
         </div>
 
