@@ -180,8 +180,10 @@ export function useDashboardStats() {
     fetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000, // 1 minute
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+      dedupingInterval: 300000, // 5 minutes
+      keepPreviousData: true,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
           setUserId(null);
@@ -207,8 +209,10 @@ export function useProfileData() {
     fetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 300000, // 5 minutes
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+      dedupingInterval: 600000, // 10 minutes
+      keepPreviousData: true,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
           setUserId(null);
@@ -234,8 +238,10 @@ export function useRecentChats() {
     fetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 30000, // 30 seconds
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+      dedupingInterval: 300000, // 5 minutes
+      keepPreviousData: true,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
           setUserId(null);
@@ -261,8 +267,10 @@ export function usePapers() {
     fetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 120000, // 2 minutes
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+      dedupingInterval: 300000, // 5 minutes
+      keepPreviousData: true,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
           setUserId(null);
