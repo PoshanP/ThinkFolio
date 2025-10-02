@@ -118,37 +118,26 @@ export function RecentPapers() {
   };
 
   const deletePaper = async (paperId: string) => {
-    if (!confirm('Are you sure you want to delete this paper? This will also delete all associated chat sessions.')) {
+    if (!confirm('Are you sure you want to delete this paper? This will also delete all associated chat sessions, messages, and highlights.')) {
       return;
     }
 
     setDeleting(paperId);
     try {
-      // Delete associated chat sessions and messages first
-      const { data: sessions } = await supabase
-        .from('chat_sessions')
-        .select('id')
-        .eq('paper_id', paperId);
+      // Delete the paper - CASCADE will handle related records (chunks, sessions, messages, highlights)
+      const { error } = await supabase
+        .from('papers')
+        .delete()
+        .eq('id', paperId);
 
-      if (sessions) {
-        await Promise.all(sessions.map(session =>
-          supabase.from('chat_messages').delete().eq('session_id', session.id)
-        ));
-        await supabase.from('chat_sessions').delete().eq('paper_id', paperId);
-      }
-
-      // Delete paper chunks
-      await supabase.from('paper_chunks').delete().eq('paper_id', paperId);
-
-      // Delete processing status
-      await supabase.from('document_processing_status').delete().eq('paper_id', paperId);
-
-      // Delete the paper
-      await supabase.from('papers').delete().eq('id', paperId);
+      if (error) throw error;
 
       // Update local state
       const updatedPapers = papers.filter(p => p.id !== paperId);
       setPapers(updatedPapers);
+
+      // Show success message
+      alert('Paper deleted successfully!');
     } catch (error) {
       console.error('Error deleting paper:', error);
       alert('Failed to delete paper. Please try again.');
@@ -341,7 +330,8 @@ export function RecentPapers() {
                           deletePaper(paper.id);
                         }}
                         disabled={deleting === paper.id}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400 disabled:opacity-50 ml-2"
+                        className="opacity-60 group-hover:opacity-100 p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-all text-red-600 dark:text-red-400 disabled:opacity-50 ml-2"
+                        title="Delete paper"
                       >
                         {deleting === paper.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
