@@ -2,13 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { FileText, Download, Trash2, Clock, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter, useSearchParams } from "next/navigation";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface Session {
   id: string;
@@ -27,6 +22,7 @@ interface Paper {
 }
 
 export function PaperSidebar({ paperId }: { paperId: string }) {
+  const supabase = useSupabase();
   const [isSessionsExpanded, setIsSessionsExpanded] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [paper, setPaper] = useState<Paper | null>(null);
