@@ -5,6 +5,7 @@ import { User, Mail, Save, Loader2, LogOut, X } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useProfileData } from "@/lib/hooks/useApi";
+import { ThemeToggle } from "./ThemeToggle";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -200,6 +201,23 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
               )}
               <span>{saving ? "Saving..." : "Save Changes"}</span>
             </button>
+          </div>
+        )}
+
+        {/* Theme Toggle */}
+        {!isEditing && (
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                  Appearance
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Customize your theme
+                </p>
+              </div>
+              <ThemeToggle />
+            </div>
           </div>
         )}
 
