@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { FileText, MessageSquare, Clock, Trash2, Search, Loader2 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface Paper {
   id: string;
@@ -31,6 +26,7 @@ interface ChatSession {
 }
 
 export function RecentPapers() {
+  const supabase = useSupabase();
   const [papers, setPapers] = useState<Paper[]>([]);
   const [recentChats, setRecentChats] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);

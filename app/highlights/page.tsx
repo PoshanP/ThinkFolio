@@ -1,15 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { Bookmark, Trash2, Loader2, FileText, Calendar, ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface Highlight {
   id: string;
@@ -33,6 +28,7 @@ interface GroupedHighlights {
 }
 
 export default function HighlightsPage() {
+  const supabase = useSupabase();
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
