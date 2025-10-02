@@ -2,17 +2,13 @@
 
 import { useState } from "react";
 import { FileText, MessageSquare, Clock, Trash2, Search, Loader2 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { usePapers, useRecentChats } from "@/lib/hooks/useApi";
 import { invalidatePapersCache, invalidateChatsCache } from "@/lib/utils/cache";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 export function RecentPapers() {
+  const supabase = useSupabase();
   const { data: papers, isLoading: loading } = usePapers();
   const { data: chatsData, isLoading: chatsLoading } = useRecentChats();
   const [searchTerm, setSearchTerm] = useState("");
