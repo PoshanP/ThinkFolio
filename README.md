@@ -36,28 +36,119 @@ A full-stack Next.js application that allows users to upload research papers (PD
 ## 📁 Project Structure
 
 ```
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   │   ├── auth/          # Authentication endpoints
-│   │   ├── chat/          # Chat and session management
-│   │   ├── papers/        # Paper upload and management
-│   │   ├── health/        # Health check endpoint
-│   │   └── metrics/       # Application metrics
-│   ├── auth/              # Authentication pages
-│   ├── chat/              # Chat interface pages
-│   ├── papers/            # Paper management pages
-│   └── profile/           # User profile pages
-├── frontend/              # Frontend components
-│   └── components/        # Reusable UI components
-├── lib/                   # Shared utilities
-│   ├── db/               # Database utilities
-│   ├── services/         # Business logic services
-│   ├── supabase/         # Supabase clients
-│   ├── types/            # TypeScript definitions
-│   ├── utils/            # Helper utilities
-│   └── validation/       # Input validation schemas
-├── supabase/             # Database migrations
-└── public/               # Static assets
+├── app/                           # Next.js app directory (App Router)
+│   ├── api/                      # API routes
+│   │   ├── auth/                 # Authentication endpoints
+│   │   │   ├── signin/           # Sign in endpoint
+│   │   │   ├── signup/           # Sign up endpoint
+│   │   │   ├── signout/          # Sign out endpoint
+│   │   │   └── session/          # Session management
+│   │   ├── chat/                 # Chat functionality
+│   │   │   ├── message/          # Send chat messages
+│   │   │   └── sessions/         # Chat session management
+│   │   ├── papers/               # Paper management
+│   │   │   ├── upload/           # PDF upload processing
+│   │   │   ├── upload-url/       # Generate upload URLs
+│   │   │   └── [id]/            # Individual paper operations
+│   │   ├── rag/                  # RAG (Retrieval Augmented Generation)
+│   │   │   ├── query/            # RAG query processing
+│   │   │   ├── summary/          # Document summarization
+│   │   │   ├── process/          # Document processing
+│   │   │   └── session/          # RAG session management
+│   │   ├── user/                 # User management
+│   │   │   ├── profile/          # User profile operations
+│   │   │   └── stats/            # User statistics
+│   │   ├── highlights/           # Text highlighting features
+│   │   ├── dashboard/            # Dashboard data
+│   │   ├── metrics/              # Application metrics
+│   │   ├── health/               # Health check endpoint
+│   │   ├── check-database/       # Database connectivity check
+│   │   └── setup-database/       # Database initialization
+│   ├── auth/                     # Authentication pages
+│   │   ├── login/                # Login page
+│   │   └── signup/               # Registration page
+│   ├── chat-new/                 # Enhanced chat interface
+│   ├── highlights/               # Text highlighting page
+│   ├── layout.tsx                # Root layout component
+│   ├── page.tsx                  # Home page
+│   ├── globals.css               # Global styles
+│   └── favicon.ico               # App icon
+├── frontend/                     # Frontend components
+│   └── components/               # Reusable UI components
+│       ├── CitationBadge.tsx     # Citation display component
+│       ├── ExportChatButton.tsx  # Chat export functionality
+│       ├── HighlightableText.tsx # Text highlighting component
+│       ├── Navbar.tsx            # Navigation bar
+│       ├── PaperCard.tsx         # Paper display card
+│       ├── PaperSidebar.tsx      # Paper navigation sidebar
+│       ├── ProfileDialog.tsx     # User profile modal
+│       ├── RecentPapers.tsx      # Recent papers list
+│       ├── StatsCard.tsx         # Statistics display card
+│       ├── ThemeToggle.tsx       # Dark/light mode toggle
+│       └── UploadSection.tsx     # PDF upload interface
+├── lib/                          # Shared utilities and services
+│   ├── components/               # Shared React components
+│   │   └── ProtectedRoute.tsx    # Route protection wrapper
+│   ├── contexts/                 # React contexts
+│   │   ├── AuthContext.tsx       # Authentication state
+│   │   ├── DataContext.tsx       # Application data state
+│   │   └── ThemeContext.tsx      # Theme management
+│   ├── db/                       # Database utilities
+│   │   └── index.ts              # Database connection and queries
+│   ├── hooks/                    # Custom React hooks
+│   │   └── useApi.ts             # API interaction hook
+│   ├── rag/                      # RAG implementation
+│   │   ├── config.ts             # RAG configuration
+│   │   ├── document_processor.ts # Document processing logic
+│   │   ├── rag_agent.ts          # RAG agent implementation
+│   │   ├── rag_chain.ts          # RAG processing chain
+│   │   └── vector_store.ts       # Vector database operations
+│   ├── services/                 # Business logic services
+│   │   ├── pdf.service.ts        # PDF processing service
+│   │   └── storage.service.ts    # File storage service
+│   ├── supabase/                 # Supabase configuration
+│   │   ├── admin.ts              # Admin client
+│   │   ├── client.ts             # Client-side client
+│   │   └── server.ts             # Server-side client
+│   ├── types/                    # TypeScript definitions
+│   │   ├── database.ts           # Database type definitions
+│   │   └── index.ts              # General type definitions
+│   ├── utils/                    # Helper utilities
+│   │   ├── api-response.ts       # API response formatting
+│   │   ├── auth.ts               # Authentication utilities
+│   │   ├── cache.ts              # Caching utilities
+│   │   └── export-chat.ts        # Chat export utilities
+│   ├── validation/               # Input validation
+│   │   └── index.ts              # Validation schemas
+│   ├── constants/                # Application constants
+│   │   └── index.ts              # Shared constants
+│   └── logger.ts                 # Logging utility
+├── migrations/                   # Database migrations
+│   └── 002_saved_highlights.sql  # Highlights table migration
+├── supabase/                     # Supabase configuration
+│   └── .temp/                    # Temporary Supabase files
+├── types/                        # Global type definitions
+│   └── pdf-parse.d.ts            # PDF parsing type definitions
+├── public/                       # Static assets
+│   ├── file.svg                  # File icon
+│   ├── globe.svg                 # Globe icon
+│   ├── next.svg                  # Next.js logo
+│   ├── vercel.svg                # Vercel logo
+│   └── window.svg                # Window icon
+├── create-tables.js              # Database table creation script
+├── create-rag-tables.js          # RAG-specific table creation
+├── force-create-tables.js        # Force table recreation script
+├── run-migrations.js             # Migration runner script
+├── utils.js                      # Utility functions
+├── middleware.ts                 # Next.js middleware
+├── next.config.js                # Next.js configuration
+├── tailwind.config.js            # Tailwind CSS configuration
+├── tsconfig.json                 # TypeScript configuration
+├── eslint.config.mjs             # ESLint configuration
+├── postcss.config.mjs            # PostCSS configuration
+├── vercel.json                   # Vercel deployment config
+├── package.json                  # Dependencies and scripts
+└── .env.local                    # Environment variables
 ```
 
 ## 🏗 Setup Instructions
