@@ -32,7 +32,7 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        // Successfully logged in, redirect to dashboard
+        // Successfully logged in, redirect to dashboard without refresh to prevent flicker
         router.push("/");
       }
     } catch (err: any) {
