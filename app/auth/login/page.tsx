@@ -34,11 +34,11 @@ export default function LoginPage() {
       if (data.session) {
         // Successfully logged in, redirect to dashboard
         router.push("/");
-        router.refresh(); // Refresh to update auth state
       }
     } catch (err: any) {
       console.error("Login error:", err);
       setError(err.message || "Failed to sign in. Please check your credentials.");
+    } finally {
       setIsLoading(false);
     }
   };
