@@ -162,6 +162,119 @@ Contains SQL migration files that define the database schema, including tables, 
 #### `/public` - Static Assets
 Static files served directly by Next.js without processing. Includes images, icons, and other assets accessible via root-relative paths.
 
+## 🏗 Setup Instructions
+
+### Prerequisites
+
+Before getting started, ensure you have the following installed and configured:
+
+- **Node.js 18+** - JavaScript runtime environment
+- **npm or yarn** - Package manager for dependencies
+- **Supabase Account** - Backend infrastructure (database, auth, storage)
+- **OpenAI API Key** - Required for AI chat functionality
+
+### 1. Clone and Install Dependencies
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd back_front_combiner
+
+# Install all dependencies
+npm install
+```
+
+### 2. Environment Configuration
+
+Create your local environment file from the provided template:
+
+```bash
+cp .env.example .env.local
+```
+
+Configure the following environment variables in `.env.local`:
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key
+
+# Environment
+NODE_ENV=development
+```
+
+### 3. Database Setup
+
+Follow these steps to configure your Supabase database:
+
+1. **Create Supabase Project**
+   - Visit [Supabase Dashboard](https://app.supabase.com/)
+   - Create a new project and note your project URL and API keys
+
+2. **Enable pgvector Extension**
+   - Navigate to the SQL Editor in your Supabase dashboard
+   - Run: `CREATE EXTENSION IF NOT EXISTS vector;`
+   - This enables vector similarity search for embeddings
+
+3. **Run Database Migrations**
+   ```bash
+   # Copy and execute the SQL from the migration files
+   # Located in: supabase/migrations/20240101000000_initial_schema.sql
+   ```
+   - Creates tables: `papers`, `paper_chunks`, `chat_sessions`, `chat_messages`, `message_citations`
+   - Configures Row Level Security (RLS) policies
+   - Sets up indexes for optimal query performance
+
+4. **Configure Storage Bucket**
+   - Navigate to Storage in Supabase dashboard
+   - Create a new bucket named `papers`
+   - Set bucket to **private**
+   - Configure RLS policies to allow authenticated users to upload/read their own papers
+
+### 4. Development
+
+Start the development server and begin building:
+
+```bash
+# Launch the development server
+npm run dev
+
+# Application will be available at http://localhost:3000
+```
+
+The development server includes:
+- Hot module replacement (HMR) for instant updates
+- Fast Refresh for React components
+- API routes with Edge Runtime
+- Automatic TypeScript type checking
+
+### 5. Build & Deploy
+
+Verify your application is production-ready:
+
+```bash
+# Create an optimized production build
+npm run build
+
+# Run TypeScript compiler for type validation
+npm run typecheck
+
+# Check code quality and formatting
+npm run lint
+```
+
+**Deploying to Vercel:**
+1. Push your code to GitHub/GitLab/Bitbucket
+2. Import the project in Vercel dashboard
+3. Add all environment variables from `.env.local`
+4. Deploy - Vercel will automatically build and deploy your application
+
 ## 🔧 Key Components & Architecture
 
 ### Backend Services (`/lib/services`)
