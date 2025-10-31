@@ -32,7 +32,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth event:', event);
 
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        router.push('/auth/login');
+      } else if (event === 'TOKEN_REFRESHED') {
         if (!session) {
           setUser(null);
           router.push('/auth/login');
@@ -41,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (event === 'SIGNED_IN') {
         setUser(session?.user || null);
+        setLoading(false);
       } else if (event === 'USER_UPDATED') {
         setUser(session?.user || null);
       }
