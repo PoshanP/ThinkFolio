@@ -1,0 +1,30 @@
+{
+  "name": "api-token-management",
+  "version": "1.0.0",
+  "description": "Comprehensive API token management system for multiple services",
+  "main": "config.js",
+  "scripts": {
+    "example": "node example.js",
+    "test": "node example.js"
+  },
+  "keywords": [
+    "api",
+    "tokens",
+    "configuration",
+    "openai",
+    "anthropic",
+    "stripe",
+    "aws",
+    "gcp",
+    "authentication"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
