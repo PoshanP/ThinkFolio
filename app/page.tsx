@@ -40,7 +40,7 @@ export default function Home() {
             onClick={() => router.push('/')}
             className="text-left hover:opacity-80 transition-opacity"
           >
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            <h1 className="text-2xl font-semibold text-indigo-900 dark:text-indigo-300">
               ThinkFolio
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
