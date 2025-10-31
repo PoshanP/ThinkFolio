@@ -36,9 +36,8 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        // Successfully logged in, redirect to dashboard
+        // Successfully logged in, redirect to dashboard without refresh to prevent flicker
         router.push("/");
-        router.refresh(); // Refresh to update auth state
       }
     } catch (err: any) {
       console.error("Login error:", err);
