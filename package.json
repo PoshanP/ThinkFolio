@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p ${THINKFOLIO_PORT:-3000}",
     "build": "next build --turbopack",
-    "start": "next start",
+    "start": "next start -p ${THINKFOLIO_PORT:-3000}",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "migrate": "supabase db push",
