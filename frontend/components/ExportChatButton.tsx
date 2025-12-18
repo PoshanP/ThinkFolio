@@ -24,7 +24,7 @@ interface ExportChatButtonProps {
 }
 
 export function ExportChatButton({
-  sessionId,
+  sessionId: _sessionId,
   sessionTitle,
   paperTitle,
   sessionDate,

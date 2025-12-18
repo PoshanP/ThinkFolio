@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, MessageSquare, User, LogOut, LogIn, Bookmark } from "lucide-react";
+import { FileText, MessageSquare, User, LogOut, Bookmark } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
@@ -59,8 +59,6 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <ThemeToggle />
-
             <div className="relative">
               {isAuthenticated ? (
                 <>

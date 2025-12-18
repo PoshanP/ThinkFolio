@@ -49,3 +49,40 @@ export class SimpleCache<T> {
 
 // Simple global cache instances
 export const searchCache = new SimpleCache<any>(50, 300000); // 5 minutes
+
+// SWR cache management utilities
+import { mutate } from 'swr';
+
+/**
+ * Utility functions for managing SWR cache
+ */
+
+// Invalidate specific cache keys
+export function invalidateCache(keys: string | string[]) {
+  const keysArray = Array.isArray(keys) ? keys : [keys];
+  keysArray.forEach(key => mutate(key));
+}
+
+// Invalidate all dashboard-related caches
+export function invalidateDashboardCache(userId: string) {
+  mutate(`dashboard-stats|${userId}`);
+  mutate(`papers|${userId}`);
+  mutate(`recent-chats|${userId}`);
+}
+
+// Invalidate papers cache only
+export function invalidatePapersCache(userId: string) {
+  mutate(`papers|${userId}`);
+  mutate(`dashboard-stats|${userId}`); // Also invalidate stats as they depend on papers
+}
+
+// Invalidate chats cache only
+export function invalidateChatsCache(userId: string) {
+  mutate(`recent-chats|${userId}`);
+  mutate(`dashboard-stats|${userId}`); // Also invalidate stats as they depend on chats
+}
+
+// Clear all caches
+export function clearAllCaches() {
+  mutate(() => true, undefined, { revalidate: false });
+}

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RAGAgent } from '@/lib/rag/rag_agent';
 import { ConfigManager, loadConfigFromEnv } from '@/lib/rag/config';
+import { requireAuth } from '@/lib/utils/auth';
+import { createServerClientSSR } from '@/lib/supabase/server';
 
 const configManager = new ConfigManager(loadConfigFromEnv());
 const config = configManager.get();
@@ -18,17 +20,35 @@ const ragAgent = new RAGAgent({
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, paperId, title } = body;
+    const user = await requireAuth();
+    const supabase = await createServerClientSSR();
 
-    if (!userId || !paperId || !title) {
+    const body = await request.json();
+    const { paperId, title } = body;
+
+    if (!paperId || !title) {
       return NextResponse.json(
-        { error: 'User ID, Paper ID, and title are required' },
+        { error: 'Paper ID and title are required' },
         { status: 400 }
       );
     }
 
-    const sessionId = await ragAgent.createChatSession(userId, paperId, title);
+    // Ensure the paper belongs to the authenticated user
+    const { data: paper, error: paperError } = await supabase
+      .from('papers')
+      .select('id, user_id')
+      .eq('id', paperId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (paperError || !paper) {
+      return NextResponse.json(
+        { error: 'Paper not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    const sessionId = await ragAgent.createChatSession(user.id, paperId, title);
 
     return NextResponse.json({
       success: true,
@@ -46,30 +66,49 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await requireAuth();
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
-    const userId = searchParams.get('userId');
     const paperId = searchParams.get('paperId');
 
     if (sessionId) {
+      const supabase = await createServerClientSSR();
+
+      // Ensure session belongs to the authenticated user
+      const { data: sessionOwner, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .select('id, user_id')
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (sessionError || !sessionOwner) {
+        return NextResponse.json(
+          { error: 'Session not found' },
+          { status: 404 }
+        );
+      }
+
       const session = await ragAgent.getChatSession(sessionId);
+
+      if (!session || session.user_id !== user.id) {
+        return NextResponse.json(
+          { error: 'Session not found or access denied' },
+          { status: 404 }
+        );
+      }
 
       return NextResponse.json({
         success: true,
         session,
       });
-    } else if (userId) {
-      const sessions = await ragAgent.getUserChatSessions(userId, paperId || undefined);
+    } else {
+      const sessions = await ragAgent.getUserChatSessions(user.id, paperId || undefined);
 
       return NextResponse.json({
         success: true,
         sessions,
       });
-    } else {
-      return NextResponse.json(
-        { error: 'Session ID or User ID is required' },
-        { status: 400 }
-      );
     }
   } catch (error: any) {
     console.error('Get session error:', error);

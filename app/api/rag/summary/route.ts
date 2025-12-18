@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { requireAuth } from '@/lib/utils/auth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuth();
     const body = await request.json();
     const { paper_id } = body;
 
@@ -20,6 +22,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Paper ID is required' },
         { status: 400 }
+      );
+    }
+
+    const { data: paperOwnership, error: ownershipError } = await supabase
+      .from('papers')
+      .select('id, user_id')
+      .eq('id', paper_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (ownershipError || !paperOwnership) {
+      return NextResponse.json(
+        { error: 'Paper not found' },
+        { status: 404 }
       );
     }
 

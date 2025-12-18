@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { PDFService } from '@/lib/services/pdf.service';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { requireAuth } from '@/lib/utils/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const embeddings = new OpenAIEmbeddings({
   openAIApiKey: process.env.OPENAI_API_KEY!,
@@ -20,23 +16,39 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 });
 
 export async function POST(request: NextRequest) {
+  const adminClient = createAdminClient();
   let paperId: string | undefined;
 
   try {
+    const user = await requireAuth();
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     paperId = formData.get('paper_id') as string;
-    const userId = formData.get('user_id') as string;
 
-    if (!file || !paperId || !userId) {
+    if (!file || !paperId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
+    // Ensure the paper belongs to the authenticated user
+    const { data: paper, error: paperError } = await adminClient
+      .from('papers')
+      .select('id, user_id')
+      .eq('id', paperId)
+      .single();
+
+    if (paperError || !paper || paper.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Paper not found or access denied' },
+        { status: 404 }
+      );
+    }
+
     // Update processing status
-    await supabase
+    await adminClient
       .from('document_processing_status')
       .update({ status: 'processing', processing_started_at: new Date().toISOString() })
       .eq('paper_id', paperId);
@@ -93,7 +105,7 @@ export async function POST(request: NextRequest) {
     console.log('DEBUG: Sample chunk to insert:', chunksToInsert[0]);
     console.log('DEBUG: Total chunks to insert:', chunksToInsert.length);
 
-    const { data: insertedChunks, error: chunkError } = await supabase
+    const { data: insertedChunks, error: chunkError } = await adminClient
       .from('paper_chunks')
       .insert(chunksToInsert)
       .select();
@@ -118,11 +130,11 @@ export async function POST(request: NextRequest) {
         has_citations: false,
       }));
 
-      await supabase.from('paper_chunks_metadata').insert(metadataInserts);
+      await adminClient.from('paper_chunks_metadata').insert(metadataInserts);
     }
 
     // Update processing status to completed
-    await supabase
+    await adminClient
       .from('document_processing_status')
       .update({
         status: 'completed',
@@ -143,7 +155,8 @@ export async function POST(request: NextRequest) {
 
     // Update status to failed if we have paperId
     if (paperId) {
-      await supabase
+      const adminClient = createAdminClient();
+      await adminClient
         .from('document_processing_status')
         .update({
           status: 'failed',
@@ -163,6 +176,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await requireAuth();
+    const adminClient = createAdminClient();
+
     const { searchParams } = new URL(request.url);
     const paperId = searchParams.get('paperId');
 
@@ -173,13 +189,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: status } = await supabase
+    // Ensure the paper belongs to the authenticated user
+    const { data: paper, error: paperError } = await adminClient
+      .from('papers')
+      .select('id, user_id')
+      .eq('id', paperId)
+      .single();
+
+    if (paperError || !paper || paper.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Paper not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    const { data: status } = await adminClient
       .from('document_processing_status')
       .select('*')
       .eq('paper_id', paperId)
       .single();
 
-    const { count } = await supabase
+    const { count } = await adminClient
       .from('paper_chunks')
       .select('*', { count: 'exact', head: true })
       .eq('paper_id', paperId);

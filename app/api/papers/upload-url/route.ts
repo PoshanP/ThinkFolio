@@ -1,19 +1,42 @@
 import { NextRequest } from 'next/server'
+import { requireAuth } from '@/lib/utils/auth'
+import { createServerClientSSR } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { url, title, userId, paperId } = await request.json()
+    const user = await requireAuth()
+    const supabase = await createServerClientSSR()
 
-    if (!url || !title || !userId || !paperId) {
+    const { url, title, paperId } = await request.json()
+
+    if (!url || !title || !paperId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Ensure the paper belongs to the authenticated user
+    const { data: paper, error: paperError } = await supabase
+      .from('papers')
+      .select('id, user_id')
+      .eq('id', paperId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (paperError || !paper) {
+      return Response.json({ error: 'Paper not found or access denied' }, { status: 404 })
     }
 
     // Validate URL format
     try {
-      new URL(url)
+      const parsedUrl = new URL(url)
+      if (parsedUrl.protocol !== 'https:') {
+        return Response.json({ error: 'Only HTTPS URLs are allowed' }, { status: 400 })
+      }
     } catch {
       return Response.json({ error: 'Invalid URL format' }, { status: 400 })
     }
+
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData?.session?.access_token
 
     // Fetch PDF from URL with timeout
     const controller = new AbortController()
@@ -86,11 +109,11 @@ export async function POST(request: NextRequest) {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('paper_id', paperId)
-    formData.append('user_id', userId)
 
     const processResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'}/api/rag/process`, {
       method: 'POST',
       body: formData,
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
     })
 
     if (!processResponse.ok) {

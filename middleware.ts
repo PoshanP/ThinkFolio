@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const publicRoutes = ['/api/auth/signin', '/api/auth/signup', '/api/health', '/api/rag/process']
+const publicRoutes = ['/api/auth/signin', '/api/auth/signup', '/api/health']
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({
@@ -12,7 +12,6 @@ export async function middleware(request: NextRequest) {
   })
 
   const pathname = request.nextUrl.pathname
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
 
   // CORS headers for API routes
   if (pathname.startsWith('/api/')) {

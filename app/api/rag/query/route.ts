@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RAGAgent } from '@/lib/rag/rag_agent';
 import { ConfigManager, loadConfigFromEnv } from '@/lib/rag/config';
+import { requireAuth } from '@/lib/utils/auth';
+import { createServerClientSSR } from '@/lib/supabase/server';
 
 const configManager = new ConfigManager(loadConfigFromEnv());
 const config = configManager.get();
@@ -18,21 +20,60 @@ const ragAgent = new RAGAgent({
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuth();
+    const supabase = await createServerClientSSR();
+
     const body = await request.json();
     const {
       question,
-      userId,
       sessionId,
       paperId,
       retrievalOptions = {},
       stream = false,
     } = body;
 
-    if (!question || !userId) {
+    if (!question) {
       return NextResponse.json(
-        { error: 'Question and userId are required' },
+        { error: 'Question is required' },
         { status: 400 }
       );
+    }
+
+    // Verify session and paper ownership
+    let resolvedPaperId = paperId as string | undefined;
+
+    if (sessionId) {
+      const { data: session, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .select('id, user_id, paper_id')
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .single<{ id: string; user_id: string; paper_id: string | null }>();
+
+      if (sessionError || !session) {
+        return NextResponse.json(
+          { error: 'Session not found or access denied' },
+          { status: 404 }
+        );
+      }
+
+      resolvedPaperId = resolvedPaperId || session.paper_id;
+    }
+
+    if (resolvedPaperId) {
+      const { data: paper, error: paperError } = await supabase
+        .from('papers')
+        .select('id, user_id')
+        .eq('id', resolvedPaperId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (paperError || !paper) {
+        return NextResponse.json(
+          { error: 'Paper not found or access denied' },
+          { status: 404 }
+        );
+      }
     }
 
     const options = {
@@ -48,12 +89,12 @@ export async function POST(request: NextRequest) {
 
       ragAgent.streamQuery(
         question,
-        userId,
+        user.id,
         async (chunk: string) => {
           await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
         },
         sessionId,
-        paperId,
+        resolvedPaperId,
         options
       ).then(async (result) => {
         await writer.write(
@@ -84,9 +125,9 @@ export async function POST(request: NextRequest) {
     } else {
       const result = await ragAgent.query(
         question,
-        userId,
+        user.id,
         sessionId,
-        paperId,
+        resolvedPaperId,
         options
       );
 
