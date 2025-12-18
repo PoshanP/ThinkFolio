@@ -44,7 +44,7 @@ export default function Home() {
               ThinkFolio
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              AI-powered document analysis and chat
+              Research paper chat with AI-powered citations and insights
             </p>
           </button>
         </div>
