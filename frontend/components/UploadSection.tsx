@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, FileText, X, Loader2, Plus, CheckCircle, Link2 } from "lucide-react";
+import { Upload, FileText, X, Loader2, Plus, Link2 } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 
@@ -12,7 +12,6 @@ export function UploadSection() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentName, setDocumentName] = useState<string>("");
   const [pdfUrl, setPdfUrl] = useState<string>("");
-  const [validatingUrl, setValidatingUrl] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,8 +63,8 @@ export function UploadSection() {
       // Get estimated page count from file size
       const estimatedPageCount = await getPageCount(fileToProcess);
 
-      const { data: paper, error: paperError } = await supabase
-        .from('papers')
+      const { data: paper, error: paperError } = await (supabase
+        .from('papers') as any)
         .insert({
           user_id: user.id,
           title: paperTitle,
@@ -77,7 +76,7 @@ export function UploadSection() {
         .select()
         .single();
 
-      if (paperError) throw paperError;
+      if (paperError || !paper) throw paperError;
 
       // Process PDF using the working RAG endpoint
       setProcessingStatus("Processing PDF...");
@@ -97,7 +96,7 @@ export function UploadSection() {
         throw new Error(`Processing failed: ${errorData.error || 'Unknown error'}`);
       }
 
-      const processResult = await processResponse.json();
+      await processResponse.json();
 
       // Generate automatic summary
       setProcessingStatus("Generating summary...");
@@ -105,8 +104,8 @@ export function UploadSection() {
       // Create chat session first
       setProcessingStatus("Creating chat session...");
 
-      const { data: session, error: sessionError } = await supabase
-        .from('chat_sessions')
+      const { data: session, error: sessionError } = await (supabase
+        .from('chat_sessions') as any)
         .insert({
           paper_id: paper.id,
           user_id: user.id,
@@ -117,7 +116,7 @@ export function UploadSection() {
         .select()
         .single();
 
-      if (sessionError) throw sessionError;
+      if (sessionError || !session) throw sessionError;
 
       // Generate automatic summary using the RAG system
       try {
@@ -138,8 +137,8 @@ export function UploadSection() {
           const summaryData = await summaryResponse.json();
 
           // Save the summary as the first message
-          await supabase
-            .from('chat_messages')
+          await (supabase
+            .from('chat_messages') as any)
             .insert({
               session_id: session.id,
               role: 'assistant',
@@ -263,8 +262,8 @@ export function UploadSection() {
       // Save paper to database first
       setProcessingStatus("Saving paper...");
 
-      const { data: paper, error: paperError } = await supabase
-        .from('papers')
+      const { data: paper, error: paperError } = await (supabase
+        .from('papers') as any)
         .insert({
           user_id: user.id,
           title: documentName,
@@ -276,7 +275,7 @@ export function UploadSection() {
         .select()
         .single();
 
-      if (paperError) throw paperError;
+      if (paperError || !paper) throw paperError;
 
       // Process PDF using URL upload endpoint
       setProcessingStatus("Downloading and processing PDF...");
@@ -297,15 +296,15 @@ export function UploadSection() {
       if (!response.ok) {
         const errorData = await response.json();
         // Delete the paper record if processing fails
-        await supabase.from('papers').delete().eq('id', paper.id);
+        await (supabase.from('papers') as any).delete().eq('id', paper.id);
         throw new Error(errorData.error || 'Failed to process URL');
       }
 
       // Create chat session
       setProcessingStatus("Creating chat session...");
 
-      const { data: session, error: sessionError } = await supabase
-        .from('chat_sessions')
+      const { data: session, error: sessionError } = await (supabase
+        .from('chat_sessions') as any)
         .insert({
           paper_id: paper.id,
           user_id: user.id,
@@ -316,7 +315,7 @@ export function UploadSection() {
         .select()
         .single();
 
-      if (sessionError) throw sessionError;
+      if (sessionError || !session) throw sessionError;
 
       // Generate automatic summary
       try {
@@ -337,8 +336,8 @@ export function UploadSection() {
           const summaryData = await summaryResponse.json();
 
           // Save the summary as the first message
-          await supabase
-            .from('chat_messages')
+          await (supabase
+            .from('chat_messages') as any)
             .insert({
               session_id: session.id,
               role: 'assistant',

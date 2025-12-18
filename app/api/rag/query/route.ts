@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         .select('id, user_id, paper_id')
         .eq('id', sessionId)
         .eq('user_id', user.id)
-        .single();
+        .single<{ id: string; user_id: string; paper_id: string | null }>();
 
       if (sessionError || !session) {
         return NextResponse.json(

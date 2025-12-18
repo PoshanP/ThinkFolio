@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FileText, Download, Trash2, Clock, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -31,12 +31,7 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
   const searchParams = useSearchParams();
   const currentSessionId = searchParams.get('session');
 
-  useEffect(() => {
-    fetchPaperDetails();
-    fetchSessions();
-  }, [paperId]);
-
-  const fetchPaperDetails = async () => {
+  const fetchPaperDetails = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('papers')
@@ -49,9 +44,9 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
     } catch (error) {
       console.error('Error fetching paper:', error);
     }
-  };
+  }, [supabase, paperId]);
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -65,7 +60,8 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
         `)
         .eq('paper_id', paperId)
         .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .returns<(Session & { chat_messages?: { id: string }[] })[]>();
 
       if (error) throw error;
 
@@ -80,7 +76,12 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase, paperId]);
+
+  useEffect(() => {
+    fetchPaperDetails();
+    fetchSessions();
+  }, [fetchPaperDetails, fetchSessions]);
 
   const handleDownload = async () => {
     if (!paper) return;
