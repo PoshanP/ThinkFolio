@@ -24,14 +24,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerClientSSR();
 
     const body = await request.json();
-    const { userId, paperId, title } = body;
-
-    if (userId && userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden: user mismatch' },
-        { status: 403 }
-      );
-    }
+    const { paperId, title } = body;
 
     if (!paperId || !title) {
       return NextResponse.json(
@@ -40,6 +33,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure the paper belongs to the authenticated user
     const { data: paper, error: paperError } = await supabase
       .from('papers')
       .select('id, user_id')
@@ -75,17 +69,26 @@ export async function GET(request: NextRequest) {
     const user = await requireAuth();
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
-    const userId = searchParams.get('userId');
     const paperId = searchParams.get('paperId');
 
-    if (userId && userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden: user mismatch' },
-        { status: 403 }
-      );
-    }
-
     if (sessionId) {
+      const supabase = await createServerClientSSR();
+
+      // Ensure session belongs to the authenticated user
+      const { data: sessionOwner, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .select('id, user_id')
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (sessionError || !sessionOwner) {
+        return NextResponse.json(
+          { error: 'Session not found' },
+          { status: 404 }
+        );
+      }
+
       const session = await ragAgent.getChatSession(sessionId);
 
       if (!session || session.user_id !== user.id) {
@@ -99,18 +102,13 @@ export async function GET(request: NextRequest) {
         success: true,
         session,
       });
-    } else if (userId) {
+    } else {
       const sessions = await ragAgent.getUserChatSessions(user.id, paperId || undefined);
 
       return NextResponse.json({
         success: true,
         sessions,
       });
-    } else {
-      return NextResponse.json(
-        { error: 'Session ID or User ID is required' },
-        { status: 400 }
-      );
     }
   } catch (error: any) {
     console.error('Get session error:', error);

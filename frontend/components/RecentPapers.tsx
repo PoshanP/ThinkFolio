@@ -1,117 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FileText, MessageSquare, Clock, Trash2, Search, Loader2 } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
-
-interface Paper {
-  id: string;
-  title: string;
-  source: string;
-  page_count: number;
-  created_at: string;
-  chat_count?: number;
-  status?: string;
-}
-
-interface ChatSession {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  paper?: {
-    title: string;
-  };
-}
+import { usePapers, useRecentChats } from "@/lib/hooks/useApi";
+import { invalidatePapersCache, invalidateChatsCache } from "@/lib/utils/cache";
 
 export function RecentPapers() {
   const supabase = useSupabase();
-  const [papers, setPapers] = useState<Paper[]>([]);
-  const [recentChats, setRecentChats] = useState<ChatSession[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [chatsLoading, setChatsLoading] = useState(true);
+  const { data: papers, isLoading: loading } = usePapers();
+  const { data: chatsData, isLoading: chatsLoading } = useRecentChats();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchAllPapers();
-    fetchRecentChats();
-  }, []);
-
-  const fetchAllPapers = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      // Fetch ALL papers with processing status
-      const { data: papersData, error } = await supabase
-        .from('papers')
-        .select(`
-          *,
-          document_processing_status (status)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch chat counts for each paper
-      const papersWithChatCounts = await Promise.all(
-        (papersData || []).map(async (paper) => {
-          const { count } = await supabase
-            .from('chat_sessions')
-            .select('*', { count: 'exact', head: true })
-            .eq('paper_id', paper.id);
-
-          return {
-            ...paper,
-            chat_count: count || 0,
-            status: paper.document_processing_status?.[0]?.status || 'processed'
-          };
-        })
-      );
-
-      setPapers(papersWithChatCounts);
-    } catch (error) {
-      console.error('Error fetching papers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRecentChats = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setChatsLoading(false);
-        return;
-      }
-
-      const { data: chatsData, error } = await supabase
-        .from('chat_sessions')
-        .select(`
-          *,
-          papers (title)
-        `)
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-
-      setRecentChats(chatsData || []);
-    } catch (error) {
-      console.error('Error fetching recent chats:', error);
-    } finally {
-      setChatsLoading(false);
-    }
-  };
+  const recentChats = chatsData?.sessions?.slice(0, 5) || [];
 
   const deletePaper = async (paperId: string) => {
     if (!confirm('Are you sure you want to delete this paper? This will also delete all associated chat sessions, messages, and highlights.')) {
@@ -120,19 +24,21 @@ export function RecentPapers() {
 
     setDeleting(paperId);
     try {
-      // Delete the paper - CASCADE will handle related records (chunks, sessions, messages, highlights)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Delete the paper - CASCADE should handle related records (chunks, sessions, messages, highlights)
       const { error } = await supabase
         .from('papers')
         .delete()
-        .eq('id', paperId);
+        .eq('id', paperId)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
-      // Update local state
-      const updatedPapers = papers.filter(p => p.id !== paperId);
-      setPapers(updatedPapers);
-
-      // Show success message
+      // Invalidate caches to refresh data
+      invalidatePapersCache(user.id);
+      invalidateChatsCache(user.id);
       alert('Paper deleted successfully!');
     } catch (error) {
       console.error('Error deleting paper:', error);
@@ -164,7 +70,7 @@ export function RecentPapers() {
         sessionId = existingSessions[0].id;
       } else {
         // Create new chat session only if none exist
-        const paper = papers.find(p => p.id === paperId);
+        const paper = papers?.find(p => p.id === paperId);
 
         const { data: session, error } = await supabase
           .from('chat_sessions')
@@ -180,6 +86,9 @@ export function RecentPapers() {
 
         if (error) throw error;
         sessionId = session.id;
+
+        // Invalidate chats cache after creating new session
+        invalidateChatsCache(user.id);
       }
 
       // Go to chat page with the session and paper filter
@@ -216,7 +125,7 @@ export function RecentPapers() {
     }
   };
 
-  const filteredPapers = papers.filter(paper =>
+  const filteredPapers = (papers || []).filter(paper =>
     paper.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 

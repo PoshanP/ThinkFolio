@@ -7,24 +7,10 @@ export async function POST(request: NextRequest) {
     const user = await requireAuth()
     const supabase = await createServerClientSSR()
 
-    const { url, title, userId, paperId } = await request.json()
-
-    if (userId && userId !== user.id) {
-      return Response.json({ error: 'Forbidden: user mismatch' }, { status: 403 })
-    }
+    const { url, title, paperId } = await request.json()
 
     if (!url || !title || !paperId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // Validate URL format
-    try {
-      const parsedUrl = new URL(url)
-      if (parsedUrl.protocol !== 'https:') {
-        return Response.json({ error: 'Only HTTPS URLs are allowed' }, { status: 400 })
-      }
-    } catch {
-      return Response.json({ error: 'Invalid URL format' }, { status: 400 })
     }
 
     // Ensure the paper belongs to the authenticated user
@@ -37,6 +23,16 @@ export async function POST(request: NextRequest) {
 
     if (paperError || !paper) {
       return Response.json({ error: 'Paper not found or access denied' }, { status: 404 })
+    }
+
+    // Validate URL format
+    try {
+      const parsedUrl = new URL(url)
+      if (parsedUrl.protocol !== 'https:') {
+        return Response.json({ error: 'Only HTTPS URLs are allowed' }, { status: 400 })
+      }
+    } catch {
+      return Response.json({ error: 'Invalid URL format' }, { status: 400 })
     }
 
     const { data: sessionData } = await supabase.auth.getSession()

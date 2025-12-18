@@ -39,13 +39,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (body.userId && body.userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden: user mismatch' },
-        { status: 403 }
-      );
-    }
-
     // Verify session and paper ownership
     let resolvedPaperId = paperId as string | undefined;
 
