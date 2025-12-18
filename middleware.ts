@@ -12,7 +12,6 @@ export async function middleware(request: NextRequest) {
   })
 
   const pathname = request.nextUrl.pathname
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
 
   // CORS headers for API routes
   if (pathname.startsWith('/api/')) {

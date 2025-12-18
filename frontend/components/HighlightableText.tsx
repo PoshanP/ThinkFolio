@@ -13,8 +13,8 @@ interface HighlightableTextProps {
 
 export function HighlightableText({
   text,
-  messageId,
-  paperId,
+  messageId: _messageId,
+  paperId: _paperId,
   onSave,
   className = "",
 }: HighlightableTextProps) {

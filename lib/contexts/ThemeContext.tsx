@@ -67,7 +67,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
               .from('profiles')
               .select('theme_preference')
               .eq('id', session.user.id)
-              .single();
+              .single<{ theme_preference: string | null }>();
 
             if (profile?.theme_preference) {
               const dbTheme = profile.theme_preference as Theme;
@@ -122,8 +122,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session?.user) {
-        await supabase
-          .from('profiles')
+        await (supabase
+          .from('profiles') as any)
           .update({ theme_preference: newTheme })
           .eq('id', session.user.id);
       }

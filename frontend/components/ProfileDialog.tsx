@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Mail, Save, Loader2, LogOut, X } from "lucide-react";
+import { Mail, Save, Loader2, LogOut, X } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { useProfileData } from "@/lib/hooks/useApi";
@@ -26,9 +26,9 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
 
-  const { data: profileData, error, isLoading: loading, mutate } = useProfileData() as {
+  const { data: profileData, isLoading: loading, mutate } = useProfileData() as {
     data: ProfileData | undefined;
     error: any;
     isLoading: boolean;
@@ -47,8 +47,8 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
     try {
       if (!profileData?.user) return;
 
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await (supabase
+        .from('profiles') as any)
         .update({
           name,
           bio,
@@ -135,14 +135,6 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
           </div>
         </div>
 
-        {/* Theme Settings */}
-        <div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Theme Preference
-          </label>
-          <ThemeToggle />
-        </div>
-
         {/* Profile Form */}
         <div className="space-y-4">
           <div>
@@ -209,6 +201,23 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
             </button>
           </div>
         )}
+
+        {/* Theme Toggle */}
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                Appearance
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {theme === 'system'
+                  ? `Following system (${resolvedTheme} mode)`
+                  : `Using ${theme} mode`}
+              </p>
+            </div>
+            <ThemeToggle />
+          </div>
+        </div>
 
         {/* Sign Out Button */}
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
