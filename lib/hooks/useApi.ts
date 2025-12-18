@@ -27,7 +27,7 @@ async function fetchDashboardStats(userId: string) {
   const [papersData, chatsData, papersWithPages] = await Promise.all([
     supabase.from('papers').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('chat_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-    supabase.from('papers').select('page_count').eq('user_id', userId)
+    supabase.from('papers').select('page_count').eq('user_id', userId).returns<{ page_count: number }[]>()
   ]);
 
   const totalPages = papersWithPages.data?.reduce((sum, paper) => sum + (paper.page_count || 0), 0) || 0;
@@ -83,6 +83,15 @@ async function fetchProfileData(userId: string) {
   };
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  paper_id: string | null;
+  papers: { title: string } | null;
+}
+
 // Recent chats fetcher
 async function fetchRecentChats(userId: string) {
   const { data: sessions } = await supabase
@@ -97,7 +106,8 @@ async function fetchRecentChats(userId: string) {
     `)
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
-    .limit(10);
+    .limit(10)
+    .returns<ChatSession[]>();
 
   if (!sessions?.length) return { sessions: [], messages: {} };
 
@@ -128,6 +138,15 @@ async function fetchRecentChats(userId: string) {
   return { sessions, messages: messagesBySession };
 }
 
+interface PaperData {
+  id: string;
+  title: string;
+  page_count: number;
+  created_at: string;
+  document_processing_status?: { status: string }[];
+  [key: string]: any;
+}
+
 // Papers fetcher
 async function fetchPapers(userId: string) {
   const { data: papersData, error } = await supabase
@@ -137,13 +156,14 @@ async function fetchPapers(userId: string) {
       document_processing_status (status)
     `)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .returns<PaperData[]>();
 
   if (error) throw error;
 
   // Get chat counts for each paper
   const papersWithChatCounts = await Promise.all(
-    (papersData || []).map(async (paper) => {
+    (papersData || []).map(async (paper: PaperData) => {
       const { count } = await supabase
         .from('chat_sessions')
         .select('*', { count: 'exact', head: true })

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, User, Loader2, FileText } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
+import { AuthThemeToggle } from "@/frontend/components/AuthThemeToggle";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -48,7 +48,7 @@ export default function SignupPage() {
             name: name,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          }, {
+          } as any, {
             onConflict: 'id'
           });
 
@@ -75,9 +75,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-12">
-      <div className="absolute top-6 right-6">
-        <ThemeToggle />
-      </div>
+      <AuthThemeToggle />
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">

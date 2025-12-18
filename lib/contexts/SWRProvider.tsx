@@ -29,9 +29,6 @@ export function SWRProvider({ children }: SWRProviderProps) {
         shouldRetryOnError: true,
         errorRetryCount: 3,
         errorRetryInterval: 5000,
-
-        // Optimistic UI updates
-        optimisticData: (current) => current,
       }}
     >
       {children}

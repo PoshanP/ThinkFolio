@@ -1,21 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, MessageSquare, Clock, Trash2, Search, Loader2 } from "lucide-react";
+import { FileText, Clock, Trash2, Search, Loader2 } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { usePapers, useRecentChats } from "@/lib/hooks/useApi";
 import { invalidatePapersCache, invalidateChatsCache } from "@/lib/utils/cache";
 
+interface Paper {
+  id: string;
+  title: string;
+  page_count: number;
+  created_at: string;
+  status?: string;
+  chat_count?: number;
+}
+
+interface Chat {
+  id: string;
+  title: string;
+  updated_at: string;
+  paper?: {
+    title: string;
+  };
+}
+
 export function RecentPapers() {
   const supabase = useSupabase();
-  const { data: papers, isLoading: loading } = usePapers();
-  const { data: chatsData, isLoading: chatsLoading } = useRecentChats();
+  const { data: papers, isLoading: loading } = usePapers() as { data: Paper[] | undefined; isLoading: boolean };
+  const { data: chatsData, isLoading: chatsLoading } = useRecentChats() as { data: { sessions?: Chat[] } | undefined; isLoading: boolean };
   const [searchTerm, setSearchTerm] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const router = useRouter();
 
-  const recentChats = chatsData?.sessions?.slice(0, 5) || [];
+  const recentChats: Chat[] = chatsData?.sessions?.slice(0, 5) || [];
 
   const deletePaper = async (paperId: string) => {
     if (!confirm('Are you sure you want to delete this paper? This will also delete all associated chat sessions, messages, and highlights.')) {
@@ -59,7 +77,8 @@ export function RecentPapers() {
         .select('*')
         .eq('user_id', user.id)
         .eq('paper_id', paperId)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .returns<{ id: string }[]>();
 
       if (fetchError) throw fetchError;
 
@@ -70,10 +89,10 @@ export function RecentPapers() {
         sessionId = existingSessions[0].id;
       } else {
         // Create new chat session only if none exist
-        const paper = papers?.find(p => p.id === paperId);
+        const paper = papers?.find((p: Paper) => p.id === paperId);
 
-        const { data: session, error } = await supabase
-          .from('chat_sessions')
+        const { data: session, error } = await (supabase
+          .from('chat_sessions') as any)
           .insert({
             user_id: user.id,
             paper_id: paperId,
@@ -84,7 +103,7 @@ export function RecentPapers() {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error || !session) throw error;
         sessionId = session.id;
 
         // Invalidate chats cache after creating new session

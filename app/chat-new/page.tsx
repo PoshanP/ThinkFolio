@@ -172,11 +172,11 @@ function ChatNewPageContent() {
           paper_id: filterPaperId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .select()
-        .single();
+        .single<ChatSession>();
 
-      if (error) {
+      if (error || !session) {
         console.error('Error creating session:', error);
         return;
       }
@@ -210,9 +210,9 @@ function ChatNewPageContent() {
           papers (title)
         `)
         .eq('id', sessionId)
-        .single();
+        .single<ChatSession>();
 
-      if (sessionError) throw sessionError;
+      if (sessionError || !session) throw sessionError;
       setCurrentSession(session);
 
       // Check cache first
@@ -226,7 +226,8 @@ function ChatNewPageContent() {
         .from('chat_messages')
         .select('*')
         .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .returns<Message[]>();
 
       if (messagesError) throw messagesError;
 
@@ -291,8 +292,8 @@ function ChatNewPageContent() {
     try {
       if (messages.length === 0) {
         const newTitle = messageContent.slice(0, 50) + (messageContent.length > 50 ? '...' : '');
-        await supabase
-          .from('chat_sessions')
+        await (supabase
+          .from('chat_sessions') as any)
           .update({
             title: newTitle,
             updated_at: new Date().toISOString()
@@ -421,8 +422,8 @@ function ChatNewPageContent() {
         return;
       }
 
-      const { error } = await supabase
-        .from('saved_highlights')
+      const { error } = await (supabase
+        .from('saved_highlights') as any)
         .insert({
           user_id: user.id,
           paper_id: currentSession.paper_id,

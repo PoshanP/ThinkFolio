@@ -112,7 +112,8 @@ export default function HighlightsPage() {
         .eq('paper_id', paperId)
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
-        .limit(1);
+        .limit(1)
+        .returns<{ id: string }[]>();
 
       if (error) {
         console.error('Error fetching sessions:', error);
@@ -124,8 +125,8 @@ export default function HighlightsPage() {
         router.push(`/chat-new?session=${sessions[0].id}`);
       } else {
         // Create new session for this paper
-        const { data: newSession, error: createError } = await supabase
-          .from('chat_sessions')
+        const { data: newSession, error: createError } = await (supabase
+          .from('chat_sessions') as any)
           .insert({
             user_id: user.id,
             paper_id: paperId,
@@ -136,7 +137,7 @@ export default function HighlightsPage() {
           .select()
           .single();
 
-        if (createError) {
+        if (createError || !newSession) {
           console.error('Error creating session:', createError);
           return;
         }
