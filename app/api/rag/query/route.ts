@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RAGAgent } from '@/lib/rag/rag_agent';
 import { ConfigManager, loadConfigFromEnv } from '@/lib/rag/config';
+import { requireAuth } from '@/lib/utils/auth';
+import { createServerClientSSR } from '@/lib/supabase/server';
 
 const configManager = new ConfigManager(loadConfigFromEnv());
 const config = configManager.get();
@@ -18,21 +20,64 @@ const ragAgent = new RAGAgent({
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuth();
     const body = await request.json();
     const {
       question,
-      userId,
       sessionId,
       paperId,
       retrievalOptions = {},
       stream = false,
     } = body;
 
-    if (!question || !userId) {
+    if (!question) {
       return NextResponse.json(
-        { error: 'Question and userId are required' },
+        { error: 'Question is required' },
         { status: 400 }
       );
+    }
+
+    const supabase = await createServerClientSSR();
+
+    // Validate session ownership when provided
+    if (sessionId) {
+      const { data: session, error } = await supabase
+        .from('chat_sessions')
+        .select('id, user_id, paper_id')
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error || !session) {
+        return NextResponse.json(
+          { error: 'Session not found' },
+          { status: 404 }
+        );
+      }
+
+      if (paperId && session.paper_id && session.paper_id !== paperId) {
+        return NextResponse.json(
+          { error: 'Paper does not belong to the requested session' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate paper ownership when provided
+    if (paperId) {
+      const { data: paper, error } = await supabase
+        .from('papers')
+        .select('id, user_id')
+        .eq('id', paperId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error || !paper) {
+        return NextResponse.json(
+          { error: 'Paper not found' },
+          { status: 404 }
+        );
+      }
     }
 
     const options = {
@@ -48,7 +93,7 @@ export async function POST(request: NextRequest) {
 
       ragAgent.streamQuery(
         question,
-        userId,
+        user.id,
         async (chunk: string) => {
           await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
         },
@@ -84,7 +129,7 @@ export async function POST(request: NextRequest) {
     } else {
       const result = await ragAgent.query(
         question,
-        userId,
+        user.id,
         sessionId,
         paperId,
         options
