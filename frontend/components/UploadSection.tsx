@@ -2,13 +2,8 @@
 
 import { useState, useRef } from "react";
 import { Upload, FileText, X, Loader2, Plus, CheckCircle, Link2 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type UploadMode = 'file' | 'url';
 
@@ -22,6 +17,7 @@ export function UploadSection() {
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const supabase = useSupabase();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
