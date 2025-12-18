@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { ExportChatButton } from "@/frontend/components/ExportChatButton";
 import { HighlightableText } from "@/frontend/components/HighlightableText";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 
 interface ChatSession {
   id: string;
@@ -558,7 +557,6 @@ function ChatNewPageContent() {
                 messages={messages}
               />
             )}
-            <ThemeToggle />
           </div>
         </div>
 
