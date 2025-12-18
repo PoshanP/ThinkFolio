@@ -1,6 +1,6 @@
 # ThinkFolio - Research Paper Chat App
 
-A full-stack Next.js application that allows users to upload research papers (PDFs) and chat with them using AI. Built with Next.js 15, Supabase, and OpenAI.
+A comprehensive research paper management and AI chat application. Upload PDFs, engage in intelligent conversations with your documents, and get precise citations and insights. Built with Next.js 15, Supabase, and OpenAI for a seamless research experience.
 
 ## 🚀 Features
 
