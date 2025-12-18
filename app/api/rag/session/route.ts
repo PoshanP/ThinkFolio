@@ -21,6 +21,8 @@ const ragAgent = new RAGAgent({
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+    const supabase = await createServerClientSSR();
+
     const body = await request.json();
     const { paperId, title } = body;
 
@@ -30,8 +32,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const supabase = await createServerClientSSR();
 
     // Ensure the paper belongs to the authenticated user
     const { data: paper, error: paperError } = await supabase
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (paperError || !paper) {
       return NextResponse.json(
-        { error: 'Paper not found' },
+        { error: 'Paper not found or access denied' },
         { status: 404 }
       );
     }
@@ -91,31 +91,19 @@ export async function GET(request: NextRequest) {
 
       const session = await ragAgent.getChatSession(sessionId);
 
+      if (!session || session.user_id !== user.id) {
+        return NextResponse.json(
+          { error: 'Session not found or access denied' },
+          { status: 404 }
+        );
+      }
+
       return NextResponse.json({
         success: true,
         session,
       });
     } else {
-      const supabase = await createServerClientSSR();
-
-      let query = supabase
-        .from('chat_sessions')
-        .select(`
-          *,
-          papers (title)
-        `)
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
-
-      if (paperId) {
-        query = query.eq('paper_id', paperId);
-      }
-
-      const { data: sessions, error } = await query;
-
-      if (error) {
-        throw error;
-      }
+      const sessions = await ragAgent.getUserChatSessions(user.id, paperId || undefined);
 
       return NextResponse.json({
         success: true,

@@ -21,6 +21,8 @@ const ragAgent = new RAGAgent({
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+    const supabase = await createServerClientSSR();
+
     const body = await request.json();
     const {
       question,
@@ -37,44 +39,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createServerClientSSR();
+    // Verify session and paper ownership
+    let resolvedPaperId = paperId as string | undefined;
 
-    // Validate session ownership when provided
     if (sessionId) {
-      const { data: session, error } = await supabase
+      const { data: session, error: sessionError } = await supabase
         .from('chat_sessions')
         .select('id, user_id, paper_id')
         .eq('id', sessionId)
         .eq('user_id', user.id)
         .single();
 
-      if (error || !session) {
+      if (sessionError || !session) {
         return NextResponse.json(
-          { error: 'Session not found' },
+          { error: 'Session not found or access denied' },
           { status: 404 }
         );
       }
 
-      if (paperId && session.paper_id && session.paper_id !== paperId) {
-        return NextResponse.json(
-          { error: 'Paper does not belong to the requested session' },
-          { status: 400 }
-        );
-      }
+      resolvedPaperId = resolvedPaperId || session.paper_id;
     }
 
-    // Validate paper ownership when provided
-    if (paperId) {
-      const { data: paper, error } = await supabase
+    if (resolvedPaperId) {
+      const { data: paper, error: paperError } = await supabase
         .from('papers')
         .select('id, user_id')
-        .eq('id', paperId)
+        .eq('id', resolvedPaperId)
         .eq('user_id', user.id)
         .single();
 
-      if (error || !paper) {
+      if (paperError || !paper) {
         return NextResponse.json(
-          { error: 'Paper not found' },
+          { error: 'Paper not found or access denied' },
           { status: 404 }
         );
       }
@@ -98,7 +94,7 @@ export async function POST(request: NextRequest) {
           await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
         },
         sessionId,
-        paperId,
+        resolvedPaperId,
         options
       ).then(async (result) => {
         await writer.write(
@@ -131,7 +127,7 @@ export async function POST(request: NextRequest) {
         question,
         user.id,
         sessionId,
-        paperId,
+        resolvedPaperId,
         options
       );
 
