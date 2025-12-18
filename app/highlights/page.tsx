@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { Bookmark, Trash2, Loader2, FileText, Calendar, ArrowLeft } from "lucide-react";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 
 interface Highlight {
   id: string;
@@ -198,7 +197,6 @@ export default function HighlightsPage() {
                 </h1>
               </div>
             </div>
-            <ThemeToggle />
           </div>
           <p className="text-gray-600 dark:text-gray-400 text-sm ml-14">
             Your saved quotes and key passages from research papers

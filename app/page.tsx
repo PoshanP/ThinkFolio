@@ -4,7 +4,6 @@ import { useState } from "react";
 import { UploadSection } from "@/frontend/components/UploadSection";
 import { RecentPapers } from "@/frontend/components/RecentPapers";
 import { ProfileDialog } from "@/frontend/components/ProfileDialog";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { FileText, MessageSquare, Clock, BookOpen, User, Bookmark } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -51,8 +50,6 @@ export default function Home() {
 
         {/* Actions */}
         <div className="flex items-center space-x-4">
-          <ThemeToggle />
-
           <Link
             href="/chat-new"
             prefetch={true}
