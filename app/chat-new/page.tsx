@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus,
@@ -17,11 +17,6 @@ import {
 import { ExportChatButton } from "@/frontend/components/ExportChatButton";
 import { HighlightableText } from "@/frontend/components/HighlightableText";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface ChatSession {
   id: string;
@@ -45,6 +40,7 @@ interface Message {
 }
 
 function ChatNewPageContent() {
+  const supabase = useSupabase();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
