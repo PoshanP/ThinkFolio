@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { PDFService } from '@/lib/services/pdf.service';
+import { requireAuth } from '@/lib/utils/auth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,15 +24,30 @@ export async function POST(request: NextRequest) {
   let paperId: string | undefined;
 
   try {
+    const user = await requireAuth();
     const formData = await request.formData();
     const file = formData.get('file') as File;
     paperId = formData.get('paper_id') as string;
-    const userId = formData.get('user_id') as string;
 
-    if (!file || !paperId || !userId) {
+    if (!file || !paperId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      );
+    }
+
+    // Ensure the paper belongs to the authenticated user
+    const { data: paper, error: paperError } = await supabase
+      .from('papers')
+      .select('id, user_id')
+      .eq('id', paperId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (paperError || !paper) {
+      return NextResponse.json(
+        { error: 'Paper not found' },
+        { status: 404 }
       );
     }
 
@@ -163,6 +179,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await requireAuth();
     const { searchParams } = new URL(request.url);
     const paperId = searchParams.get('paperId');
 
@@ -170,6 +187,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'Paper ID is required' },
         { status: 400 }
+      );
+    }
+
+    // Ensure the paper belongs to the authenticated user
+    const { data: paper, error: paperError } = await supabase
+      .from('papers')
+      .select('id, user_id')
+      .eq('id', paperId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (paperError || !paper) {
+      return NextResponse.json(
+        { error: 'Paper not found' },
+        { status: 404 }
       );
     }
 
