@@ -72,8 +72,13 @@ A full-stack Next.js application that allows users to upload research papers (PD
 
 ```bash
 git clone <repository-url>
-cd back_front_combiner
+cd thinkfolio
 npm install
+```
+
+**Verify installation:**
+```bash
+npm list --depth=0  # Check all dependencies installed correctly
 ```
 
 ### 2. Environment Configuration
@@ -85,34 +90,47 @@ cp .env.example .env.local
 
 Fill in your environment variables in `.env.local`:
 ```env
-# Supabase Configuration
+# Supabase Configuration (Get from: Settings > API in Supabase Dashboard)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key
+# OpenAI Configuration (Get from: https://platform.openai.com/api-keys)
+OPENAI_API_KEY=sk-...
 
-# JWT Configuration
+# JWT Configuration (Generate with: openssl rand -base64 32)
 JWT_SECRET=your_jwt_secret_key
 
 # Environment
 NODE_ENV=development
 ```
 
+**Important:** Never commit `.env.local` to version control!
+
 ### 3. Database Setup
 
-1. Create a new Supabase project
-2. Enable the pgvector extension in your Supabase database
-3. Run the database migrations:
+1. **Create a new Supabase project** at https://supabase.com/dashboard
 
-```sql
--- Copy and run the SQL from supabase/migrations/20240101000000_initial_schema.sql
+2. **Enable the pgvector extension:**
+   - Go to Database > Extensions in Supabase Dashboard
+   - Search for "vector" and enable the `pgvector` extension
+
+3. **Run the database migrations:**
+   - Go to SQL Editor in Supabase Dashboard
+   - Copy and execute the SQL from `supabase/migrations/20240101000000_initial_schema.sql`
+   - Verify tables are created by checking Database > Tables
+
+4. **Set up storage bucket for papers:**
+   - Go to Storage in Supabase Dashboard
+   - Create a new bucket named `papers`
+   - Set it as private (not public)
+   - Configure RLS policies to allow authenticated users to upload/read their own papers
+
+**Verify setup:**
+```bash
+# Check if pgvector is enabled
+# Run in SQL Editor: SELECT * FROM pg_extension WHERE extname = 'vector';
 ```
-
-4. Set up storage bucket for papers:
-   - Create a bucket named `papers` in Supabase Storage
-   - Configure appropriate policies for authenticated users
 
 ### 4. Development
 
