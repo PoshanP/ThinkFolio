@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update processing status
+    // Update processing status on papers table
     await supabase
-      .from('document_processing_status')
-      .update({ status: 'processing', processing_started_at: new Date().toISOString() })
-      .eq('paper_id', paperId);
+      .from('papers')
+      .update({ processing_status: 'processing' })
+      .eq('id', paperId);
 
     // Process PDF content for embedding
     console.log('Processing PDF file...');
@@ -121,15 +121,22 @@ export async function POST(request: NextRequest) {
       await supabase.from('paper_chunks_metadata').insert(metadataInserts);
     }
 
-    // Update processing status to completed
-    await supabase
-      .from('document_processing_status')
+    // Update processing status and page count on papers table
+    console.log('Updating paper with page_count:', pdfMetadata.pageCount);
+    const { error: updateError } = await supabase
+      .from('papers')
       .update({
-        status: 'completed',
-        total_chunks: chunks.length,
-        processing_completed_at: new Date().toISOString()
+        processing_status: 'completed',
+        processing_error: null,
+        page_count: pdfMetadata.pageCount || 1
       })
-      .eq('paper_id', paperId);
+      .eq('id', paperId);
+
+    if (updateError) {
+      console.error('Failed to update paper:', updateError);
+    } else {
+      console.log('Paper updated successfully with page_count:', pdfMetadata.pageCount);
+    }
 
     return NextResponse.json({
       success: true,
@@ -144,13 +151,12 @@ export async function POST(request: NextRequest) {
     // Update status to failed if we have paperId
     if (paperId) {
       await supabase
-        .from('document_processing_status')
+        .from('papers')
         .update({
-          status: 'failed',
-          error_message: error.message,
-          processing_completed_at: new Date().toISOString()
+          processing_status: 'failed',
+          processing_error: error.message
         })
-        .eq('paper_id', paperId);
+        .eq('id', paperId);
     }
 
     return NextResponse.json(
@@ -173,10 +179,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: status } = await supabase
-      .from('document_processing_status')
-      .select('*')
-      .eq('paper_id', paperId)
+    const { data: paper } = await supabase
+      .from('papers')
+      .select('processing_status, processing_error')
+      .eq('id', paperId)
       .single();
 
     const { count } = await supabase
@@ -187,10 +193,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       stats: {
-        status: status?.status || 'pending',
+        status: paper?.processing_status || 'pending',
+        error: paper?.processing_error || null,
         chunksCreated: count || 0,
-        processingTime: status?.completed_at ?
-          new Date(status.completed_at).getTime() - new Date(status.started_at).getTime() : 0
       },
     });
   } catch (error: any) {

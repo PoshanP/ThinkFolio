@@ -3,33 +3,17 @@
 import { useState } from "react";
 import { UploadSection } from "@/frontend/components/UploadSection";
 import { RecentPapers } from "@/frontend/components/RecentPapers";
+import { NextReadList } from "@/frontend/components/NextReadList";
 import { ProfileDialog } from "@/frontend/components/ProfileDialog";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
-import { FileText, MessageSquare, Clock, BookOpen, User, Bookmark } from "lucide-react";
+import { FileText, MessageSquare, BookMarked, BookOpen, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useDashboardStats, useRecentChats } from "@/lib/hooks/useApi";
-
-// Removed unused supabase client - using hooks instead
-
-interface DashboardStats {
-  papers: number;
-  chats: number;
-  pages: number;
-  hours: number;
-  papersTrend: string;
-  chatsTrend: string;
-  pagesTrend: string;
-  hoursTrend: string;
-}
+import { useStats } from "@/lib/contexts/StatsContext";
 
 export default function Home() {
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const { data: stats, isLoading: loading } = useDashboardStats() as { data: DashboardStats | undefined; isLoading: boolean };
-
-  // Pre-load chat data in background
-  useRecentChats();
+  const { stats, loading } = useStats();
 
   return (
     <div className="space-y-6">
@@ -44,38 +28,27 @@ export default function Home() {
               ThinkFolio
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Research paper chat with AI-powered citations and insights
+              Reading that talks back. Think faster. Struggle less.
             </p>
           </button>
         </div>
 
         {/* Actions */}
         <div className="flex items-center space-x-4">
-          <ThemeToggle />
-
           <Link
-            href="/chat-new"
+            href="/papers"
             prefetch={true}
             className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors"
           >
-            <MessageSquare className="h-4 w-4" />
-            <span>Chats</span>
-          </Link>
-
-          <Link
-            href="/highlights"
-            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
-          >
-            <Bookmark className="h-4 w-4" />
-            <span>Highlights</span>
+            <FileText className="h-4 w-4" />
+            <span>My Library</span>
           </Link>
 
           <button
             onClick={() => setIsProfileOpen(true)}
-            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+            className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-full transition-colors"
           >
             <User className="h-4 w-4" />
-            <span>Account</span>
           </button>
         </div>
       </div>
@@ -110,11 +83,11 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                {loading ? "..." : stats?.hours || 0}
+                {loading ? "..." : stats?.nextReads || 0}
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Hours</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Next Reads</p>
             </div>
-            <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <BookMarked className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
         </div>
 
@@ -141,6 +114,7 @@ export default function Home() {
         {/* Upload Section */}
         <div className="space-y-6">
           <UploadSection />
+          <NextReadList />
         </div>
       </div>
 

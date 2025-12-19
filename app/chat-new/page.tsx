@@ -12,11 +12,13 @@ import {
   Loader2,
   Menu,
   X,
-  ArrowLeft
+  ArrowLeft,
+  PanelLeftClose,
+  PanelLeft
 } from "lucide-react";
 import { ExportChatButton } from "@/frontend/components/ExportChatButton";
-import { HighlightableText } from "@/frontend/components/HighlightableText";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
+import { useStats } from "@/lib/contexts/StatsContext";
+import { useConfirm } from "@/lib/contexts/ConfirmContext";
 
 interface ChatSession {
   id: string;
@@ -41,6 +43,8 @@ interface Message {
 
 function ChatNewPageContent() {
   const supabase = useSupabase();
+  const { confirmDeleteConversation } = useConfirm();
+  const { refreshStats } = useStats();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -52,6 +56,18 @@ function ChatNewPageContent() {
   const [filterPaperId, setFilterPaperId] = useState<string | null>(null);
   const [sessionsFetched, setSessionsFetched] = useState(false);
   const [messagesCache, setMessagesCache] = useState<{[sessionId: string]: Message[]}>({});
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
+  const [chatWidth, setChatWidth] = useState(550);
+  const [isResizing, setIsResizing] = useState(false);
+  const [pdfBaseUrl, setPdfBaseUrl] = useState<string | null>(null);
+  const [processingStatus, setProcessingStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
+  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const pdfLoadedRef = useRef<boolean>(false);
+  const resizeRef = useRef<HTMLDivElement>(null);
+  const initialPaperIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageCounter = useRef(0); // Counter for unique message IDs
   const router = useRouter();
@@ -118,6 +134,10 @@ function ChatNewPageContent() {
     // Set filter if coming from a specific paper
     if (paperId) {
       setFilterPaperId(paperId);
+      // Store initial paper ID for PDF loading (only once)
+      if (!initialPaperIdRef.current) {
+        initialPaperIdRef.current = paperId;
+      }
     }
 
     if (sessionId) {
@@ -184,12 +204,7 @@ function ChatNewPageContent() {
       setCurrentSession(session);
       setMessages([]);
       setSessions(prev => [session, ...prev]);
-
-      const urlParams = new URLSearchParams({ session: session.id });
-      if (filterPaperId) {
-        urlParams.set('paper', filterPaperId);
-      }
-      router.push(`/chat-new?${urlParams.toString()}`);
+      setChatOpen(true);
     } catch (error) {
       console.error('Error creating session:', error);
     }
@@ -198,7 +213,20 @@ function ChatNewPageContent() {
   const loadSession = async (sessionId: string) => {
     if (currentSession?.id === sessionId) return;
 
-    // Clear messages immediately when switching sessions
+    // Check cache first - if cached, use immediately without loading state
+    if (messagesCache[sessionId]) {
+      setMessages(messagesCache[sessionId]);
+      // Still fetch session data for currentSession but don't show loading
+      const { data: session } = await supabase
+        .from('chat_sessions')
+        .select(`*, papers (title)`)
+        .eq('id', sessionId)
+        .single();
+      if (session) setCurrentSession(session);
+      return;
+    }
+
+    // Not cached - show loading
     setMessages([]);
     setLoadingSession(true);
 
@@ -214,13 +242,6 @@ function ChatNewPageContent() {
 
       if (sessionError) throw sessionError;
       setCurrentSession(session);
-
-      // Check cache first
-      if (messagesCache[sessionId]) {
-        setMessages(messagesCache[sessionId]);
-        setLoadingSession(false);
-        return;
-      }
 
       const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
@@ -390,13 +411,16 @@ function ChatNewPageContent() {
   };
 
   const deleteSession = async (sessionId: string) => {
-    if (!confirm('Delete this conversation?')) return;
+    const confirmed = await confirmDeleteConversation();
+    if (!confirmed) return;
 
     try {
       await supabase.from('chat_messages').delete().eq('session_id', sessionId);
       await supabase.from('chat_sessions').delete().eq('id', sessionId);
 
       setSessions(prev => prev.filter(s => s.id !== sessionId));
+      // Refresh stats in background
+      refreshStats();
 
       if (currentSession?.id === sessionId) {
         setCurrentSession(null);
@@ -405,40 +429,6 @@ function ChatNewPageContent() {
       }
     } catch (error) {
       console.error('Error deleting session:', error);
-    }
-  };
-
-  const handleSaveHighlight = async (text: string, pageNo?: number) => {
-    if (!currentSession?.paper_id) {
-      alert('Cannot save highlight: No paper associated with this chat');
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        alert('Please log in to save highlights');
-        return;
-      }
-
-      const { error } = await supabase
-        .from('saved_highlights')
-        .insert({
-          user_id: user.id,
-          paper_id: currentSession.paper_id,
-          highlighted_text: text,
-          page_no: pageNo || null,
-        });
-
-      if (error) {
-        console.error('Error saving highlight:', error);
-        throw error;
-      }
-
-      alert('✓ Quote saved to highlights!');
-    } catch (error) {
-      console.error('Error saving highlight:', error);
-      alert('Failed to save highlight. Please try again.');
     }
   };
 
@@ -452,24 +442,298 @@ function ChatNewPageContent() {
     return matchesSearch && matchesPaper;
   });
 
+  // Load PDF preview only once on initial mount, with processing status check
+  useEffect(() => {
+    const loadPreview = async () => {
+      // Only load once
+      if (pdfLoadedRef.current) return;
+
+      const paperId = initialPaperIdRef.current || searchParams.get('paper');
+      if (!paperId) {
+        return;
+      }
+
+      pdfLoadedRef.current = true;
+      setPreviewLoading(true);
+
+      try {
+        // First check processing status
+        const { data: paper, error } = await supabase
+          .from('papers')
+          .select('storage_path, processing_status, processing_error')
+          .eq('id', paperId)
+          .single();
+
+        if (error) {
+          console.error('Paper fetch error:', error);
+          return;
+        }
+
+        // Check if paper has chunks (means it's been processed regardless of status)
+        const { count: chunkCount } = await supabase
+          .from('paper_chunks')
+          .select('*', { count: 'exact', head: true })
+          .eq('paper_id', paperId);
+
+        // If chunks exist, paper is processed - override any stale status
+        const hasChunks = (chunkCount || 0) > 0;
+        const status = hasChunks ? 'completed' : (paper?.processing_status || 'completed');
+        setProcessingStatus(status);
+
+        if (status === 'pending' || status === 'processing') {
+          // Poll for completion
+          const pollInterval = setInterval(async () => {
+            // Check both status and chunks
+            const [{ data: updatedPaper }, { count: updatedChunkCount }] = await Promise.all([
+              supabase
+                .from('papers')
+                .select('processing_status, processing_error, storage_path')
+                .eq('id', paperId)
+                .single(),
+              supabase
+                .from('paper_chunks')
+                .select('*', { count: 'exact', head: true })
+                .eq('paper_id', paperId)
+            ]);
+
+            const chunksExist = (updatedChunkCount || 0) > 0;
+            const effectiveStatus = chunksExist ? 'completed' : (updatedPaper?.processing_status || null);
+
+            if (updatedPaper) {
+              setProcessingStatus(effectiveStatus);
+
+              if (effectiveStatus === 'completed') {
+                clearInterval(pollInterval);
+                setProcessingError(null);
+                // Load PDF after processing complete
+                if (updatedPaper.storage_path) {
+                  const { data: signed } = await supabase.storage
+                    .from('papers')
+                    .createSignedUrl(updatedPaper.storage_path, 60 * 60);
+                  if (signed?.signedUrl) {
+                    setPdfBaseUrl(signed.signedUrl);
+                  }
+                }
+                setPreviewLoading(false);
+
+                // Generate summary now that processing is done
+                const sessionId = searchParams.get('session');
+                const { data: { user } } = await supabase.auth.getUser();
+                if (sessionId && user) {
+                  generateSummary(paperId, sessionId, user.id);
+                }
+              } else if (effectiveStatus === 'failed') {
+                clearInterval(pollInterval);
+                setProcessingError(updatedPaper.processing_error || 'Processing failed');
+                setPreviewLoading(false);
+              }
+            }
+          }, 2000); // Poll every 2 seconds
+
+          // Cleanup interval on unmount
+          return () => clearInterval(pollInterval);
+        }
+
+        if (status === 'failed') {
+          setProcessingError(paper.processing_error || 'Processing failed');
+          setPreviewLoading(false);
+          return;
+        }
+
+        // Processing is complete, load PDF
+        if (!paper?.storage_path) {
+          console.error('No storage_path for paper');
+          setPreviewLoading(false);
+          return;
+        }
+
+        const { data: signed, error: signedError } = await supabase.storage
+          .from('papers')
+          .createSignedUrl(paper.storage_path, 60 * 60);
+
+        if (signedError || !signed?.signedUrl) {
+          console.error('Signed URL error:', signedError);
+          return;
+        }
+        console.log('PDF URL obtained:', signed.signedUrl.substring(0, 100) + '...');
+
+        setPdfBaseUrl(signed.signedUrl);
+
+        // Generate summary for new sessions with already-processed papers
+        const sessionId = searchParams.get('session');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (sessionId && user && paperId) {
+          // Check if session already has messages (don't regenerate summary)
+          const { count } = await supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', sessionId);
+
+          if (count === 0) {
+            // New session, generate summary
+            generateSummary(paperId, sessionId, user.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading PDF preview:', err);
+        setPdfBaseUrl(null);
+      } finally {
+        if (processingStatus === 'completed' || processingStatus === 'failed' || processingStatus === null) {
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    loadPreview();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Generate summary for the paper
+  const generateSummary = async (paperId: string, sessionId: string, userId: string) => {
+    setGeneratingSummary(true);
+
+    // Add placeholder loading message
+    const loadingMessage: Message = {
+      id: `loading-summary-${Date.now()}`,
+      content: '',
+      role: 'assistant',
+      created_at: new Date().toISOString(),
+      session_id: sessionId,
+      metadata: { is_loading: true, is_system_summary: true }
+    };
+    setMessages(prev => [...prev, loadingMessage]);
+
+    try {
+      const summaryResponse = await fetch('/api/rag/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: "Please provide a comprehensive summary of this paper including its main contributions, methodology, and key findings.",
+          paperId: paperId,
+          sessionId: sessionId,
+          userId: userId,
+        }),
+      });
+
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        await supabase
+          .from('chat_messages')
+          .insert({
+            session_id: sessionId,
+            role: 'assistant',
+            content: summaryData.answer,
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            metadata: {
+              citations: summaryData.sources?.map((source: { metadata?: { page?: number }; content: string }) => ({
+                page: source.metadata?.page || 0,
+                text: source.content
+              })),
+              is_system_summary: true
+            }
+          });
+
+        // Reload messages to show the summary
+        loadSession(sessionId);
+      } else {
+        // Remove loading message on error
+        setMessages(prev => prev.filter(m => m.id !== loadingMessage.id));
+      }
+    } catch (err) {
+      console.error('Error generating summary:', err);
+      // Remove loading message on error
+      setMessages(prev => prev.filter(m => !m.metadata?.is_loading));
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
+
+  // Handle chat panel resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      e.preventDefault();
+      const sidebarWidth = sidebarOpen ? 256 : 56;
+      const newWidth = e.clientX - sidebarWidth;
+      requestAnimationFrame(() => {
+        setChatWidth(Math.min(Math.max(280, newWidth), 800));
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove, { passive: false });
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      // Prevent iframe from capturing mouse events during resize
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
+        (iframe as HTMLElement).style.pointerEvents = 'none';
+      });
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
+        (iframe as HTMLElement).style.pointerEvents = '';
+      });
+    };
+  }, [isResizing, sidebarOpen]);
+
   return (
     <div className="fixed inset-0 z-50 flex h-screen bg-white dark:bg-gray-900" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 bg-gray-100 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 flex flex-col overflow-hidden`}>
-        <div className="p-3 space-y-2">
-          {filterPaperId && (
-            <button
-              onClick={createNewSession}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-white hover:bg-gray-200 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white rounded-lg transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              New chat
-            </button>
+      <div className={`${sidebarOpen ? 'w-64' : 'w-14'} transition-all duration-300 bg-gray-100 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 flex flex-col`}>
+        {/* Header */}
+        <div className={`p-3 border-b border-gray-200 dark:border-gray-700 flex ${sidebarOpen ? 'items-center justify-between' : 'flex-col items-center gap-2'}`}>
+          {sidebarOpen ? (
+            <>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.back()}
+                  className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                </button>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Conversations</h2>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <PanelLeftClose className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => router.back()}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              </button>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <PanelLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              </button>
+            </>
           )}
         </div>
 
-        {!filterPaperId && (
-          <div className="px-3 pb-3">
+        {/* Search - only when expanded */}
+        {sidebarOpen && !filterPaperId && (
+          <div className="px-3 py-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400" />
               <input
@@ -483,8 +747,9 @@ function ChatNewPageContent() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-2">
-          {filteredSessions.map((session) => (
+        {/* Session list */}
+        <div className={`flex-1 overflow-y-auto pt-2 ${sidebarOpen ? 'px-2' : 'px-1'}`}>
+          {filteredSessions.map((session, index) => (
             <div
               key={session.id}
               className={`group mb-1 rounded-lg cursor-pointer transition-colors ${
@@ -496,159 +761,212 @@ function ChatNewPageContent() {
                 if (currentSession?.id !== session.id) {
                   setCurrentSession(session);
                   loadSession(session.id);
-                  router.push(`/chat-new?session=${session.id}`);
                 }
+                setChatOpen(true);
               }}
+              title={!sidebarOpen ? session.title : undefined}
             >
-              <div className="flex items-center justify-between px-3 py-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-gray-900 dark:text-white truncate font-medium">
-                    {session.title}
-                  </div>
-                  {session.paper && (
-                    <div className="text-xs text-gray-600 dark:text-gray-400 truncate mt-0.5">
-                      📄 {session.paper.title}
+              {sidebarOpen ? (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-gray-900 dark:text-white truncate font-medium">
+                      {session.title}
                     </div>
-                  )}
+                    {session.paper && (
+                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate mt-0.5">
+                        📄 {session.paper.title}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSession(session.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-opacity"
+                  >
+                    <Trash2 className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                  </button>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteSession(session.id);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-opacity"
-                >
-                  <Trash2 className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-                </button>
-              </div>
+              ) : (
+                <div className="flex items-center justify-center py-2">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium ${
+                    currentSession?.id === session.id
+                      ? 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {session.title.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
+
+        {/* New chat button at bottom */}
+        {filterPaperId && (
+          <div className={`p-2 border-t border-gray-200 dark:border-gray-700 ${sidebarOpen ? 'px-3' : 'px-1'}`}>
+            <button
+              onClick={createNewSession}
+              className={`flex items-center justify-center gap-2 text-sm bg-white hover:bg-gray-200 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white rounded-lg transition-colors ${
+                sidebarOpen ? 'w-full px-3 py-2' : 'w-10 h-10 mx-auto'
+              }`}
+              title={!sidebarOpen ? 'New chat' : undefined}
+            >
+              <Plus className="h-4 w-4" />
+              {sidebarOpen && <span>New chat</span>}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push('/')}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-900 dark:text-white" />
-            </button>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              {sidebarOpen ? <X className="h-5 w-5 text-gray-900 dark:text-white" /> : <Menu className="h-5 w-5 text-gray-900 dark:text-white" />}
-            </button>
-          </div>
-          <div className="text-sm font-medium text-gray-900 dark:text-white">
-            {currentSession?.title || 'ThinkFolio'}
-          </div>
-          <div className="flex items-center gap-2">
-            {currentSession && (
-              <ExportChatButton
-                sessionId={currentSession.id}
-                sessionTitle={currentSession.title}
-                paperTitle={currentSession.paper?.title}
-                sessionDate={currentSession.created_at}
-                messages={messages}
-              />
-            )}
-            <ThemeToggle />
-          </div>
-        </div>
-
-        {loadingSession ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-600 dark:text-gray-400" />
-          </div>
-        ) : currentSession ? (
-          <>
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="max-w-5xl mx-auto px-6 py-4">
-                {messages.map((message) => (
-                  <div key={message.id} className="mb-8">
-                    {message.role === 'user' ? (
-                      <div className="flex justify-end">
-                        <div className="max-w-lg">
-                          <div className="bg-blue-600 dark:bg-blue-600 text-white rounded-xl px-3 py-2 shadow-md">
-                            <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                              {message.content}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex justify-start">
-                        <div className="w-full max-w-4xl">
-                          <div className="bg-transparent text-gray-900 dark:text-gray-100 rounded-lg px-2 py-3">
-                            <HighlightableText
-                              text={message.content}
-                              messageId={message.id}
-                              paperId={currentSession?.paper_id || undefined}
-                              onSave={handleSaveHighlight}
-                              className="whitespace-pre-wrap text-sm leading-relaxed"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {currentSession && loadingSessions.has(currentSession.id) && (
-                  <div className="mb-8">
-                    <div className="flex justify-start">
-                      <div className="w-full max-w-4xl">
-                        <div className="bg-transparent text-gray-900 dark:text-gray-100 rounded-lg px-2 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-gray-600 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-600 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-600 dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                            <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">Thinking...</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
-
-            {/* Input Area */}
-            <div className="border-t border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <div className="max-w-5xl mx-auto px-6 py-4">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                    placeholder="Message ThinkFolio..."
-                    disabled={currentSession ? loadingSessions.has(currentSession.id) : false}
-                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white disabled:opacity-50"
+        {currentSession ? (
+            <div className="flex-1 flex bg-gray-50 dark:bg-gray-900 overflow-hidden">
+              {/* Chat panel */}
+              <div
+                className="flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-[margin] duration-300 ease-in-out"
+                style={{
+                  width: chatWidth,
+                  marginLeft: chatOpen ? 0 : -chatWidth
+                }}
+              >
+                <div className="flex justify-end items-center gap-1 px-2 py-2 flex-shrink-0">
+                  <ExportChatButton
+                    sessionId={currentSession.id}
+                    sessionTitle={currentSession.title}
+                    paperTitle={currentSession.paper?.title}
+                    sessionDate={currentSession.created_at}
+                    messages={messages}
                   />
                   <button
-                    onClick={sendMessage}
-                    disabled={!input.trim() || (currentSession ? loadingSessions.has(currentSession.id) : false)}
-                    className="px-4 py-3 bg-white hover:bg-gray-200 disabled:bg-gray-300 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:disabled:bg-gray-600 dark:text-white rounded-lg transition-colors disabled:cursor-not-allowed"
+                    onClick={() => setChatOpen(false)}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
                   >
-                    {currentSession && loadingSessions.has(currentSession.id) ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Send className="h-5 w-5" />
-                    )}
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
+                <div className="flex-1 overflow-y-auto">
+                  {loadingSession ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-gray-400 dark:text-gray-500 text-sm">Start conversing with your document</p>
+                    </div>
+                  ) : (
+                  <div className="px-3 py-3 space-y-6">
+                    {messages.map((message) => (
+                      <div key={message.id} className="w-full">
+                        {message.role === 'user' ? (
+                          <div className="flex justify-end">
+                            <div className="max-w-[320px]">
+                              <div className="bg-blue-600 text-white rounded-xl px-3 py-2 shadow-md">
+                                <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-start">
+                            <div className="w-full">
+                              {message.metadata?.is_loading ? (
+                                <div className="px-2 py-1">
+                                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Generating summary...</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-gray-900 dark:text-gray-100 px-2 py-1 whitespace-pre-wrap text-sm leading-relaxed">
+                                  {message.content}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {currentSession && loadingSessions.has(currentSession.id) && (
+                      <div className="flex items-center gap-2 px-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                  )}
+                </div>
+                <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                      placeholder="Message..."
+                      disabled={currentSession ? loadingSessions.has(currentSession.id) : false}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      disabled={!input.trim() || (currentSession ? loadingSessions.has(currentSession.id) : false)}
+                      className="px-3 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg disabled:opacity-50"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </>
+
+              {/* Resize handle - invisible, just cursor change at edge */}
+              {chatOpen && (
+                <div
+                  ref={resizeRef}
+                  onMouseDown={() => setIsResizing(true)}
+                  className="w-1 cursor-col-resize flex-shrink-0 z-10"
+                />
+              )}
+
+              {/* PDF viewer */}
+              <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+                {(processingStatus === 'pending' || processingStatus === 'processing') ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-6">
+                    <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                    <p className="text-sm font-medium mb-2">Processing document...</p>
+                    <p className="text-xs text-center max-w-sm">
+                      Your document is being analyzed. This usually takes 10-30 seconds.
+                    </p>
+                  </div>
+                ) : processingStatus === 'failed' ? (
+                  <div className="h-full flex flex-col items-center justify-center text-red-500 dark:text-red-400 px-6">
+                    <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                      <X className="h-6 w-6" />
+                    </div>
+                    <p className="text-sm font-medium mb-2">Processing failed</p>
+                    <p className="text-xs text-center max-w-sm text-gray-500 dark:text-gray-400">
+                      {processingError || 'An error occurred while processing your document.'}
+                    </p>
+                  </div>
+                ) : previewLoading ? (
+                  <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : pdfBaseUrl ? (
+                  <iframe
+                    src={pdfBaseUrl}
+                    className="w-full h-full border-0 bg-gray-50 dark:bg-gray-900"
+                    title="PDF Viewer"
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 px-6 text-sm">
+                    No PDF preview available for this chat.
+                  </div>
+                )}
+              </div>
+          </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center max-w-md">

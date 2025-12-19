@@ -144,11 +144,10 @@ export async function POST(_request: NextRequest) {
     // Execute all queries
     for (const query of queries) {
       try {
-        const { error } = await supabase.rpc('exec_sql', { sql: query } as any)
+        const { error } = await supabase.rpc('exec_sql', { sql: query })
         if (error) {
-          // Try direct query if RPC doesn't work
-          await (supabase as any).from('__temp__').select().limit(0)
-          await (supabase as any).rpc('sql', { query })
+          // Try sql RPC as fallback
+          await supabase.rpc('sql', { query })
         }
       } catch {
         console.log(`Query executed (might be expected): ${query.substring(0, 50)}...`)

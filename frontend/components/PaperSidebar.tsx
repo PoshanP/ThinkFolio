@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { FileText, Download, Trash2, Clock, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useConfirm } from "@/lib/contexts/ConfirmContext";
 
 interface Session {
   id: string;
@@ -18,11 +19,12 @@ interface Paper {
   title: string;
   source: string;
   page_count: number;
-  storage_path: string;
+  storage_path: string | null;
 }
 
 export function PaperSidebar({ paperId }: { paperId: string }) {
   const supabase = useSupabase();
+  const { confirmDeletePaper } = useConfirm();
   const [isSessionsExpanded, setIsSessionsExpanded] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [paper, setPaper] = useState<Paper | null>(null);
@@ -83,7 +85,7 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
   };
 
   const handleDownload = async () => {
-    if (!paper) return;
+    if (!paper || !paper.storage_path) return;
 
     try {
       const { data, error } = await supabase.storage
@@ -104,7 +106,8 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this paper and all associated chats?')) return;
+    const confirmed = await confirmDeletePaper();
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase

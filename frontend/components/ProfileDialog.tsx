@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useProfileData } from "@/lib/hooks/useApi";
 import { ThemeToggle } from "./ThemeToggle";
 import { useTheme } from "@/lib/contexts/ThemeContext";
+import { useAlert } from "@/lib/contexts/AlertContext";
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   const [saving, setSaving] = useState(false);
   const router = useRouter();
   const { resolvedTheme } = useTheme();
+  const { error: showError } = useAlert();
 
   const { data: profileData, error, isLoading: loading, mutate } = useProfileData() as {
     data: ProfileData | undefined;
@@ -62,7 +64,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile');
+      showError('Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -135,14 +137,6 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
           </div>
         </div>
 
-        {/* Theme Settings */}
-        <div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Theme Preference
-          </label>
-          <ThemeToggle />
-        </div>
-
         {/* Profile Form */}
         <div className="space-y-4">
           <div>
@@ -209,6 +203,14 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
             </button>
           </div>
         )}
+
+        {/* Theme Settings */}
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Theme Preference
+          </label>
+          <ThemeToggle />
+        </div>
 
         {/* Sign Out Button */}
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">

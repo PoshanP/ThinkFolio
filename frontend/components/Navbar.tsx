@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, MessageSquare, User, LogOut, LogIn, Bookmark } from "lucide-react";
+import { FileText, User, LogOut, LogIn } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { ThemeToggle } from "./ThemeToggle";
 
 export function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -41,26 +40,17 @@ export function Navbar() {
             {isAuthenticated && (
               <div className="hidden md:flex items-center space-x-6">
                 <Link
-                  href="/chat-new"
+                  href="/papers"
                   className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Chat</span>
-                </Link>
-                <Link
-                  href="/highlights"
-                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                >
-                  <Bookmark className="h-4 w-4" />
-                  <span>Highlights</span>
+                  <FileText className="h-4 w-4" />
+                  <span>My Library</span>
                 </Link>
               </div>
             )}
           </div>
 
           <div className="flex items-center space-x-4">
-            <ThemeToggle />
-
             <div className="relative">
               {isAuthenticated ? (
                 <>

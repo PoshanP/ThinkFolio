@@ -4,26 +4,68 @@ import { useEffect, useState } from 'react';
 
 const supabase = getSupabaseClient();
 
-// Generic fetcher function for SWR
-const fetcher = async (key: string) => {
-  const [endpoint, userId] = key.split('|');
+// Type definitions
+interface DashboardStats {
+  papers: number;
+  chats: number;
+  pages: number;
+  hours: number;
+  papersTrend: string;
+  chatsTrend: string;
+  pagesTrend: string;
+  hoursTrend: string;
+}
 
-  switch (endpoint) {
-    case 'dashboard-stats':
-      return fetchDashboardStats(userId);
-    case 'profile-data':
-      return fetchProfileData(userId);
-    case 'recent-chats':
-      return fetchRecentChats(userId);
-    case 'papers':
-      return fetchPapers(userId);
-    default:
-      throw new Error(`Unknown endpoint: ${endpoint}`);
-  }
+export interface Paper {
+  id: string;
+  title: string;
+  source: string;
+  page_count: number;
+  created_at: string;
+  updated_at: string;
+  storage_path: string | null;
+  user_id: string;
+  chat_count: number;
+  status: string;
+  is_favorite: boolean;
+  is_next_read: boolean;
+  processing_status: 'pending' | 'processing' | 'completed' | 'failed';
+  processing_error: string | null;
+}
+
+interface ProfileData {
+  user: { id: string; email?: string; created_at: string };
+  profile: { id: string; email: string | null; name: string | null; theme_preference: string | null; created_at: string; updated_at: string } | null;
+  stats: {
+    papers: number;
+    chats: number;
+    joinedDate: string;
+  };
+}
+
+// Typed fetchers for SWR
+const dashboardStatsFetcher = async (key: string): Promise<DashboardStats> => {
+  const userId = key.split('|')[1];
+  return fetchDashboardStats(userId);
+};
+
+const papersFetcher = async (key: string): Promise<Paper[]> => {
+  const userId = key.split('|')[1];
+  return fetchPapers(userId);
+};
+
+const profileDataFetcher = async (key: string): Promise<ProfileData> => {
+  const userId = key.split('|')[1];
+  return fetchProfileData(userId);
+};
+
+const recentReadsFetcher = async (key: string): Promise<Paper[]> => {
+  const userId = key.split('|')[1];
+  return fetchRecentReads(userId);
 };
 
 // Dashboard stats fetcher
-async function fetchDashboardStats(userId: string) {
+async function fetchDashboardStats(userId: string): Promise<DashboardStats> {
   const [papersData, chatsData, papersWithPages] = await Promise.all([
     supabase.from('papers').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('chat_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId),
@@ -57,7 +99,7 @@ async function fetchDashboardStats(userId: string) {
 }
 
 // Profile data fetcher
-async function fetchProfileData(userId: string) {
+async function fetchProfileData(userId: string): Promise<ProfileData> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -83,67 +125,68 @@ async function fetchProfileData(userId: string) {
   };
 }
 
-// Recent chats fetcher
-async function fetchRecentChats(userId: string) {
-  const { data: sessions } = await supabase
-    .from('chat_sessions')
-    .select(`
-      id,
-      title,
-      created_at,
-      updated_at,
-      paper_id,
-      papers (title)
-    `)
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(10);
 
-  if (!sessions?.length) return { sessions: [], messages: {} };
-
-  // Fetch messages for top 10 sessions
-  const sessionIds = sessions.map(s => s.id);
-  const { data: messages } = await supabase
-    .from('chat_messages')
-    .select('*')
-    .in('session_id', sessionIds)
-    .order('created_at', { ascending: true });
-
-  // Group messages by session
-  const messagesBySession: Record<string, any[]> = {};
-  (messages || []).forEach((msg: any) => {
-    if (!messagesBySession[msg.session_id]) {
-      messagesBySession[msg.session_id] = [];
-    }
-    messagesBySession[msg.session_id].push({
-      id: `${msg.id}-${messagesBySession[msg.session_id].length}`,
-      content: msg.content,
-      role: msg.role,
-      created_at: msg.created_at,
-      session_id: msg.session_id,
-      metadata: msg.metadata
-    });
-  });
-
-  return { sessions, messages: messagesBySession };
-}
 
 // Papers fetcher
-async function fetchPapers(userId: string) {
-  const { data: papersData, error } = await supabase
-    .from('papers')
-    .select(`
-      *,
-      document_processing_status (status)
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+async function fetchPapers(userId: string): Promise<Paper[]> {
+  // Define a type for raw paper data from the database
+  type RawPaper = {
+    id: string;
+    user_id: string;
+    title: string;
+    source: string;
+    storage_path: string | null;
+    page_count: number;
+    created_at: string;
+    updated_at: string;
+    is_next_read: boolean;
+    processing_status: 'pending' | 'processing' | 'completed' | 'failed';
+    processing_error: string | null;
+    document_processing_status?: Array<{ status: string }>;
+  };
 
-  if (error) throw error;
+  const [{ data: papersData, error }, favoritesResult] = await Promise.all([
+    supabase
+      .from('papers')
+      .select(`
+        *,
+        document_processing_status (status)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('paper_favorites')
+      .select('paper_id')
+      .eq('user_id', userId)
+  ]);
+
+  let papersResult: RawPaper[] | null = papersData as RawPaper[] | null;
+  if (error) {
+    if (error.message?.includes('document_processing_status')) {
+      console.warn('document_processing_status table missing, retrying without status join');
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('papers')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (fallbackError) throw fallbackError;
+      papersResult = fallbackData as RawPaper[] | null;
+    } else {
+      throw error;
+    }
+  }
+
+  const favoritesData = favoritesResult?.data || [];
+  if (favoritesResult?.error) {
+    console.warn('Favorites table not available, continuing without favorites:', favoritesResult.error.message);
+  }
+
+  const favoriteIds = new Set(favoritesData.map(fav => fav.paper_id));
 
   // Get chat counts for each paper
   const papersWithChatCounts = await Promise.all(
-    (papersData || []).map(async (paper) => {
+    (papersResult || []).map(async (paper) => {
       const { count } = await supabase
         .from('chat_sessions')
         .select('*', { count: 'exact', head: true })
@@ -152,12 +195,98 @@ async function fetchPapers(userId: string) {
       return {
         ...paper,
         chat_count: count || 0,
-        status: paper.document_processing_status?.[0]?.status || 'completed'
+        status: paper.document_processing_status?.[0]?.status || 'completed',
+        is_favorite: favoriteIds.has(paper.id),
+        is_next_read: paper.is_next_read ?? false,
+        processing_status: paper.processing_status ?? 'completed',
+        processing_error: paper.processing_error ?? null
       };
     })
   );
 
   return papersWithChatCounts;
+}
+
+// Recent reads fetcher - papers with chat activity in the last 7 days
+async function fetchRecentReads(userId: string): Promise<Paper[]> {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  // Get chat sessions from the last 7 days with their paper IDs
+  const { data: recentSessions, error: sessionsError } = await supabase
+    .from('chat_sessions')
+    .select('paper_id, updated_at')
+    .eq('user_id', userId)
+    .gte('updated_at', sevenDaysAgo.toISOString())
+    .order('updated_at', { ascending: false });
+
+  if (sessionsError) {
+    console.error('Error fetching recent sessions:', sessionsError);
+    return [];
+  }
+
+  if (!recentSessions || recentSessions.length === 0) {
+    return [];
+  }
+
+  // Get unique paper IDs, maintaining order by most recent activity
+  const paperIdMap = new Map<string, string>();
+  recentSessions.forEach(session => {
+    if (session.paper_id && !paperIdMap.has(session.paper_id)) {
+      paperIdMap.set(session.paper_id, session.updated_at);
+    }
+  });
+  const uniquePaperIds = Array.from(paperIdMap.keys());
+
+  // Fetch paper details (exclude next_read papers)
+  const { data: papersData, error: papersError } = await supabase
+    .from('papers')
+    .select('*')
+    .in('id', uniquePaperIds)
+    .eq('is_next_read', false);
+
+  if (papersError || !papersData) {
+    console.error('Error fetching papers:', papersError);
+    return [];
+  }
+
+  // Get favorites
+  const { data: favoritesData } = await supabase
+    .from('paper_favorites')
+    .select('paper_id')
+    .eq('user_id', userId);
+
+  const favoriteIds = new Set((favoritesData || []).map(fav => fav.paper_id));
+
+  // Get chat counts and build final result
+  const papersWithDetails = await Promise.all(
+    papersData.map(async (paper) => {
+      const { count } = await supabase
+        .from('chat_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('paper_id', paper.id);
+
+      return {
+        ...paper,
+        chat_count: count || 0,
+        status: 'completed',
+        is_favorite: favoriteIds.has(paper.id),
+        is_next_read: paper.is_next_read ?? false,
+        processing_status: paper.processing_status ?? 'completed',
+        processing_error: paper.processing_error ?? null,
+        last_read_at: paperIdMap.get(paper.id)
+      };
+    })
+  );
+
+  // Sort by last read time (most recent first)
+  papersWithDetails.sort((a, b) => {
+    const timeA = a.last_read_at ? new Date(a.last_read_at).getTime() : 0;
+    const timeB = b.last_read_at ? new Date(b.last_read_at).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  return papersWithDetails;
 }
 
 // Custom hooks
@@ -172,12 +301,13 @@ export function useDashboardStats() {
     getUser();
   }, []);
 
-  return useSWR(
+  return useSWR<DashboardStats>(
     userId ? `dashboard-stats|${userId}` : null,
-    fetcher,
+    dashboardStatsFetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
       dedupingInterval: 60000, // 1 minute
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
@@ -199,12 +329,13 @@ export function useProfileData() {
     getUser();
   }, []);
 
-  return useSWR(
+  return useSWR<ProfileData>(
     userId ? `profile-data|${userId}` : null,
-    fetcher,
+    profileDataFetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
       dedupingInterval: 300000, // 5 minutes
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
@@ -215,32 +346,7 @@ export function useProfileData() {
   );
 }
 
-export function useRecentChats() {
-  const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUser();
-  }, []);
-
-  return useSWR(
-    userId ? `recent-chats|${userId}` : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 30000, // 30 seconds
-      onError: (error) => {
-        if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
-          setUserId(null);
-        }
-      }
-    }
-  );
-}
 
 export function usePapers() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -253,12 +359,13 @@ export function usePapers() {
     getUser();
   }, []);
 
-  return useSWR(
+  return useSWR<Paper[]>(
     userId ? `papers|${userId}` : null,
-    fetcher,
+    papersFetcher,
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: true,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
       dedupingInterval: 120000, // 2 minutes
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
@@ -268,3 +375,32 @@ export function usePapers() {
     }
   );
 }
+
+export function useRecentReads() {
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
+
+  return useSWR<Paper[]>(
+    userId ? `recent-reads|${userId}` : null,
+    recentReadsFetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+      dedupingInterval: 60000, // 1 minute
+      onError: (error) => {
+        if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
+          setUserId(null);
+        }
+      }
+    }
+  );
+}
+

@@ -1,8 +1,11 @@
 import { createServerClientSSR } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createRequestLogger } from '@/lib/logger'
+import type { Database } from '@/lib/types/database'
 
 const logger = createRequestLogger('Database')
+
+type TableName = keyof Database['public']['Tables']
 
 export interface QueryOptions {
   select?: string
@@ -36,7 +39,7 @@ export class DatabaseService {
   }
 
   static async query<T>(
-    table: string,
+    table: TableName,
     options?: QueryOptions
   ): Promise<{ data: T[]; count: number | null }> {
     try {
@@ -70,7 +73,7 @@ export class DatabaseService {
         throw error
       }
 
-      return { data: data || [], count }
+      return { data: (data || []) as T[], count }
     } catch (error) {
       logger.error({ error }, 'Database query error')
       throw new Error('Database query failed')
@@ -78,7 +81,7 @@ export class DatabaseService {
   }
 
   static async batchInsert<T>(
-    table: string,
+    table: TableName,
     records: T[],
     chunkSize: number = 100
   ): Promise<void> {
@@ -146,7 +149,7 @@ export class DatabaseService {
     }
   }
 
-  static async optimizeTable(table: string): Promise<void> {
+  static async optimizeTable(table: TableName): Promise<void> {
     try {
       // In a real PostgreSQL setup, you would run VACUUM ANALYZE
       // This is a placeholder for Supabase
@@ -162,10 +165,10 @@ export class DatabaseService {
 }
 
 export class QueryBuilder {
-  private table: string
+  private table: TableName
   private options: QueryOptions = {}
 
-  constructor(table: string) {
+  constructor(table: TableName) {
     this.table = table
   }
 
@@ -202,6 +205,6 @@ export class QueryBuilder {
   }
 }
 
-export function createQueryBuilder(table: string): QueryBuilder {
+export function createQueryBuilder(table: TableName): QueryBuilder {
   return new QueryBuilder(table)
 }

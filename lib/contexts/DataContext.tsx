@@ -1,35 +1,53 @@
 "use client";
 
 import React, { createContext, useContext } from 'react';
-import { useDashboardStats, useProfileData, useRecentChats } from '@/lib/hooks/useApi';
+import { useDashboardStats, useProfileData, usePapers, useRecentReads, Paper } from '@/lib/hooks/useApi';
 
 interface DataContextType {
   dashboardStats: any;
   profileData: any;
-  recentChats: any;
+  papers: Paper[] | undefined;
+  recentReads: Paper[] | undefined;
   isLoading: boolean;
+  refreshPapers: () => void;
+  refreshRecentReads: () => void;
 }
 
 const DataContext = createContext<DataContextType>({
   dashboardStats: null,
   profileData: null,
-  recentChats: null,
-  isLoading: true
+  papers: undefined,
+  recentReads: undefined,
+  isLoading: true,
+  refreshPapers: () => {},
+  refreshRecentReads: () => {}
 });
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { data: dashboardStats, isLoading: dashboardLoading } = useDashboardStats();
   const { data: profileData, isLoading: profileLoading } = useProfileData();
-  const { data: recentChats, isLoading: chatsLoading } = useRecentChats();
+  const { data: papers, isLoading: papersLoading, mutate: mutatePapers } = usePapers();
+  const { data: recentReads, isLoading: recentReadsLoading, mutate: mutateRecentReads } = useRecentReads();
 
-  const isLoading = dashboardLoading || profileLoading || chatsLoading;
+  const isLoading = dashboardLoading || profileLoading || papersLoading || recentReadsLoading;
+
+  const refreshPapers = () => {
+    mutatePapers();
+  };
+
+  const refreshRecentReads = () => {
+    mutateRecentReads();
+  };
 
   return (
     <DataContext.Provider value={{
       dashboardStats,
       profileData,
-      recentChats,
-      isLoading
+      papers,
+      recentReads,
+      isLoading,
+      refreshPapers,
+      refreshRecentReads
     }}>
       {children}
     </DataContext.Provider>
@@ -37,3 +55,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useDataContext = () => useContext(DataContext);
+
+export const useData = () => {
+  const context = useContext(DataContext);
+  return {
+    papers: context.papers,
+    recentReads: context.recentReads,
+    refreshPapers: context.refreshPapers,
+    refreshRecentReads: context.refreshRecentReads
+  };
+};
