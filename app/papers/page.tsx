@@ -72,6 +72,7 @@ export default function PapersPage() {
         setPreviewImages(prev => ({ ...prev, ...images }));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [papers.length]);
 
   // Generate previews for next read papers
@@ -91,6 +92,7 @@ export default function PapersPage() {
         setPreviewImages(prev => ({ ...prev, ...images }));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nextReadPapers.length]);
 
   const generatePreviewImages = async (paperList: Paper[]) => {
@@ -346,20 +348,6 @@ export default function PapersPage() {
     return date.toLocaleDateString();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'processing':
-        return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30';
-      case 'processed':
-      case 'completed':
-        return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30';
-      case 'failed':
-        return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
-      default:
-        return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700';
-    }
-  };
-
   const filteredPapers = papers
     .filter(paper => !paper.is_next_read) // Exclude Next Read papers from main grid
     .filter(paper =>
@@ -421,6 +409,7 @@ export default function PapersPage() {
                       <Loader2 className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" />
                     </div>
                   ) : previewImages[paper.id] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={previewImages[paper.id]}
                       alt={paper.title}
@@ -506,6 +495,7 @@ export default function PapersPage() {
             >
               <div className="relative overflow-hidden bg-white dark:bg-gray-900 aspect-[210/297]">
                 {previewImages[paper.id] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewImages[paper.id]}
                     alt={`${paper.title} preview`}

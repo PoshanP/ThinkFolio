@@ -69,6 +69,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
       alertState.onConfirm();
     }
     close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertState.onConfirm, close]);
 
   const success = useCallback((message: string, options?: Omit<AlertOptions, "type">) => {
