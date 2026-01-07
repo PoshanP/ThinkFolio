@@ -36,27 +36,6 @@ export interface Database {
         }
         Relationships: []
       }
-      paper_favorites: {
-        Row: {
-          id: string
-          user_id: string
-          paper_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          paper_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          paper_id?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
       papers: {
         Row: {
           id: string
@@ -65,7 +44,6 @@ export interface Database {
           source: string
           storage_path: string | null
           page_count: number
-          is_next_read: boolean
           processing_status: 'pending' | 'processing' | 'completed' | 'failed'
           processing_error: string | null
           created_at: string
@@ -78,7 +56,6 @@ export interface Database {
           source: string
           storage_path?: string | null
           page_count: number
-          is_next_read?: boolean
           processing_status?: 'pending' | 'processing' | 'completed' | 'failed'
           processing_error?: string | null
           created_at?: string
@@ -91,7 +68,6 @@ export interface Database {
           source?: string
           storage_path?: string | null
           page_count?: number
-          is_next_read?: boolean
           processing_status?: 'pending' | 'processing' | 'completed' | 'failed'
           processing_error?: string | null
           created_at?: string
@@ -207,6 +183,90 @@ export interface Database {
         }
         Relationships: []
       }
+      collections: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          description: string | null
+          color: string
+          icon: string
+          display_order: number
+          is_system: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          description?: string | null
+          color?: string
+          icon?: string
+          display_order?: number
+          is_system?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          description?: string | null
+          color?: string
+          icon?: string
+          display_order?: number
+          is_system?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      paper_collections: {
+        Row: {
+          id: string
+          paper_id: string
+          collection_id: string
+          added_at: string
+        }
+        Insert: {
+          id?: string
+          paper_id: string
+          collection_id: string
+          added_at?: string
+        }
+        Update: {
+          id?: string
+          paper_id?: string
+          collection_id?: string
+          added_at?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          id: string
+          user_id: string
+          collections_seeded_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          collections_seeded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          collections_seeded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -225,4 +285,29 @@ export interface Database {
       [_ in never]: never
     }
   }
+}
+
+// Collection types
+export interface Collection {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  color: string
+  icon: string
+  display_order: number
+  is_system: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CollectionWithCount extends Collection {
+  paper_count: number
+}
+
+export interface PaperCollection {
+  id: string
+  paper_id: string
+  collection_id: string
+  added_at: string
 }

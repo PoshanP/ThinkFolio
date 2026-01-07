@@ -5,15 +5,18 @@ import { UploadSection } from "@/frontend/components/UploadSection";
 import { RecentPapers } from "@/frontend/components/RecentPapers";
 import { NextReadList } from "@/frontend/components/NextReadList";
 import { ProfileDialog } from "@/frontend/components/ProfileDialog";
-import { FileText, MessageSquare, BookMarked, BookOpen, User } from "lucide-react";
+import { CollectionsWidget } from "@/frontend/components/collections";
+import { FileText, MessageSquare, BookOpen, User, FolderOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStats } from "@/lib/contexts/StatsContext";
+import { useCollections } from "@/lib/hooks/useCollections";
 
 export default function Home() {
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { stats, loading } = useStats();
+  const { data: collections, isLoading: collectionsLoading } = useCollections();
 
   return (
     <div className="space-y-6">
@@ -54,7 +57,7 @@ export default function Home() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
@@ -83,11 +86,11 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                {loading ? "..." : stats?.nextReads || 0}
+                {loading ? "..." : stats?.pages || 0}
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Next Reads</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Pages</p>
             </div>
-            <BookMarked className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <BookOpen className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
         </div>
 
@@ -95,11 +98,11 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                {loading ? "..." : stats?.pages || 0}
+                {collectionsLoading ? "..." : collections?.length || 0}
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Pages</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Collections</p>
             </div>
-            <BookOpen className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <FolderOpen className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
         </div>
       </div>
@@ -111,8 +114,9 @@ export default function Home() {
           <RecentPapers />
         </div>
 
-        {/* Upload Section */}
+        {/* Sidebar */}
         <div className="space-y-6">
+          <CollectionsWidget />
           <UploadSection />
           <NextReadList />
         </div>

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { FileText, X, Loader2, Plus, AlertCircle, AlertTriangle } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { useAlert } from "@/lib/contexts/AlertContext";
 import { useStats } from "@/lib/contexts/StatsContext";
 import { useData } from "@/lib/contexts/DataContext";
+import { useCollections, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
+import { NEXT_READ_COLLECTION_NAME } from "@/lib/constants";
 
 export function UploadSection() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -23,6 +25,13 @@ export function UploadSection() {
   const { error: showError, warning: showWarning, success: showSuccess } = useAlert();
   const { refreshStats } = useStats();
   const { papers, refreshPapers, refreshRecentReads } = useData();
+  const { data: collections, refresh: refreshCollections } = useCollections();
+
+  // Get the Next Read collection
+  const nextReadCollection = useMemo(() =>
+    collections?.find(c => c.name === NEXT_READ_COLLECTION_NAME),
+    [collections]
+  );
 
   const MAX_PAPERS = 6;
   const paperCount = papers?.length || 0;
@@ -107,7 +116,6 @@ export function UploadSection() {
           title: paperTitle,
           source: source,
           page_count: estimatedPageCount,
-          is_next_read: !openImmediately,
           processing_status: 'pending',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -116,6 +124,22 @@ export function UploadSection() {
         .single();
 
       if (paperError) throw paperError;
+
+      // Add to Next Read collection if not opening immediately
+      if (!openImmediately && nextReadCollection) {
+        try {
+          await fetch(`/api/collections/${nextReadCollection.id}/papers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ paperIds: [paper.id] }),
+          });
+          invalidateCollectionCaches();
+          refreshCollections();
+        } catch (err) {
+          console.warn('Failed to add to Next Read collection:', err);
+        }
+      }
 
       // Upload file to storage
       setProcessingStatus("Saving file...");
@@ -245,7 +269,6 @@ export function UploadSection() {
           title: documentName,
           source: pdfUrl,
           page_count: 1,
-          is_next_read: !openImmediately,
           processing_status: 'pending',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -254,6 +277,22 @@ export function UploadSection() {
         .single();
 
       if (paperError) throw paperError;
+
+      // Add to Next Read collection if not opening immediately
+      if (!openImmediately && nextReadCollection) {
+        try {
+          await fetch(`/api/collections/${nextReadCollection.id}/papers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ paperIds: [paper.id] }),
+          });
+          invalidateCollectionCaches();
+          refreshCollections();
+        } catch (err) {
+          console.warn('Failed to add to Next Read collection:', err);
+        }
+      }
 
       // Start background processing (fire and forget)
       fetch('/api/papers/upload-url', {

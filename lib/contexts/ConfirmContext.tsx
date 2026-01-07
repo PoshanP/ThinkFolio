@@ -27,8 +27,14 @@ export const CONFIRM_PRESETS = {
   },
   removeFromNextRead: {
     title: "Remove from Next Read",
-    message: "Remove this paper from your reading queue?",
+    message: "Remove this paper from your reading list?",
     confirmText: "Remove",
+    variant: "danger" as const
+  },
+  deleteCollection: {
+    title: "Delete Collection",
+    message: "This will delete the collection but not the papers in it.",
+    confirmText: "Delete",
     variant: "danger" as const
   }
 };
@@ -38,6 +44,7 @@ interface ConfirmContextType {
   confirmDeletePaper: () => Promise<boolean>;
   confirmDeleteConversation: () => Promise<boolean>;
   confirmRemoveFromNextRead: () => Promise<boolean>;
+  confirmDeleteCollection: () => Promise<boolean>;
 }
 
 const ConfirmContext = createContext<ConfirmContextType | null>(null);
@@ -58,6 +65,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const confirmDeletePaper = useCallback(() => confirm(CONFIRM_PRESETS.deletePaper), [confirm]);
   const confirmDeleteConversation = useCallback(() => confirm(CONFIRM_PRESETS.deleteConversation), [confirm]);
   const confirmRemoveFromNextRead = useCallback(() => confirm(CONFIRM_PRESETS.removeFromNextRead), [confirm]);
+  const confirmDeleteCollection = useCallback(() => confirm(CONFIRM_PRESETS.deleteCollection), [confirm]);
 
   const handleConfirm = () => {
     setIsOpen(false);
@@ -96,7 +104,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const styles = getVariantStyles();
 
   return (
-    <ConfirmContext.Provider value={{ confirm, confirmDeletePaper, confirmDeleteConversation, confirmRemoveFromNextRead }}>
+    <ConfirmContext.Provider value={{ confirm, confirmDeletePaper, confirmDeleteConversation, confirmRemoveFromNextRead, confirmDeleteCollection }}>
       {children}
 
       {/* Confirm Dialog */}
