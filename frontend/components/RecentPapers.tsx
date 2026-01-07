@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FileText, Clock, Trash2, Loader2, Heart } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { FileText, Trash2, Loader2, Heart } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { useAlert } from "@/lib/contexts/AlertContext";
@@ -14,6 +14,8 @@ import {
   hasPreview,
   clearPreview
 } from "@/lib/utils/previewCache";
+import { useCollections, useCollectionPapers } from "@/lib/hooks/useCollections";
+import { SYSTEM_COLLECTION_NAME } from "@/lib/constants";
 
 
 
@@ -24,11 +26,20 @@ export function RecentPapers() {
   const { data: cachedPapers, isLoading: swrLoading, mutate } = usePapers();
   const { data: recentReads, isLoading: recentReadsLoading, mutate: mutateRecentReads } = useRecentReads();
 
+  // Collections hooks for Favorites
+  const { data: collections, isLoading: collectionsLoading } = useCollections();
+  const favoritesCollection = useMemo(() =>
+    collections?.find(c => c.name === SYSTEM_COLLECTION_NAME),
+    [collections]
+  );
+  const { data: favoritePapers, isLoading: favoritesLoading } = useCollectionPapers(
+    favoritesCollection?.id || null
+  );
+
   // Use SWR data directly - no local state duplication
   const papers = cachedPapers || [];
   const loading = swrLoading && !cachedPapers;
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [favoriteToggling, setFavoriteToggling] = useState<string | null>(null);
   const [previewImages, setPreviewImages] = useState<Record<string, string>>({});
   const router = useRouter();
   const { success: showSuccess, error: showError } = useAlert();
@@ -71,6 +82,25 @@ export function RecentPapers() {
       }
     }
   }, [recentReads]);
+
+  // Generate previews for favorite papers from collection
+  useEffect(() => {
+    if (favoritePapers && favoritePapers.length > 0) {
+      const newPapers = favoritePapers.filter((p: Paper) => !hasPreview(p.id) && p.storage_path);
+      if (newPapers.length > 0) {
+        generatePreviewImages(newPapers);
+      }
+      // Load existing cached previews
+      const images: Record<string, string> = {};
+      favoritePapers.forEach((p: Paper) => {
+        const img = getPreviewImage(p.id);
+        if (img) images[p.id] = img;
+      });
+      if (Object.keys(images).length > 0) {
+        setPreviewImages(prev => ({ ...prev, ...images }));
+      }
+    }
+  }, [favoritePapers]);
 
   const generatePreviewImages = async (paperList: Paper[]) => {
     await Promise.all(
@@ -124,53 +154,6 @@ export function RecentPapers() {
   };
 
 
-
-  const toggleFavorite = async (paperId: string, isFavorite: boolean) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/auth/login');
-        return;
-      }
-
-      setFavoriteToggling(paperId);
-
-      if (isFavorite) {
-        const { error } = await supabase
-          .from('paper_favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('paper_id', paperId);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('paper_favorites')
-          .insert({
-            user_id: user.id,
-            paper_id: paperId
-          });
-
-        if (error && !error.message.includes('duplicate key')) throw error;
-      }
-
-      // Update SWR cache
-      mutate((current: Paper[] | undefined) =>
-        current?.map(paper =>
-          paper.id === paperId ? { ...paper, is_favorite: !isFavorite } : paper
-        ), false);
-      // Update recent reads cache
-      mutateRecentReads((current: Paper[] | undefined) =>
-        current?.map(paper =>
-          paper.id === paperId ? { ...paper, is_favorite: !isFavorite } : paper
-        ), false);
-    } catch (error) {
-      console.error('Error updating favorite:', error);
-      showError('Could not update favorites. Please try again.');
-    } finally {
-      setFavoriteToggling(null);
-    }
-  };
 
   const deletePaper = async (paperId: string) => {
     const confirmed = await confirmDeletePaper();
@@ -270,23 +253,14 @@ export function RecentPapers() {
     return date.toLocaleDateString();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'processing':
-        return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30';
-      case 'processed':
-      case 'completed':
-        return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30';
-      case 'failed':
-        return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
-      default:
-        return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700';
-    }
-  };
 
-  const favoritePapers = papers.filter((paper) => paper.is_favorite && !paper.is_next_read);
+  // Display all favorite papers
+  const displayFavorites = useMemo(() =>
+    favoritePapers || [],
+    [favoritePapers]
+  );
 
-  if (loading) {
+  if (loading || collectionsLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -342,7 +316,7 @@ export function RecentPapers() {
         </div>
       </div>
 
-      {swrLoading ? (
+      {favoritesLoading ? (
         <div className="flex gap-3 p-3 overflow-hidden">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex-shrink-0 w-44 p-1.5 border border-gray-200 dark:border-gray-600 rounded-lg animate-pulse">
@@ -352,20 +326,20 @@ export function RecentPapers() {
             </div>
           ))}
         </div>
-      ) : favoritePapers.length === 0 ? (
+      ) : displayFavorites.length === 0 ? (
         <div className="p-12 text-center">
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">
             No favourites yet
           </p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Heart documents to see them here, or browse everything in My Library.
+            Add papers to your Favorites collection to see them here.
           </p>
           <button
-            onClick={() => router.push('/papers')}
+            onClick={() => router.push('/papers?collection=' + (favoritesCollection?.id || ''))}
             className="mt-4 inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
           >
-            <span>Go to My Library</span>
+            <span>Go to Favorites</span>
           </button>
         </div>
       ) : (
@@ -374,7 +348,7 @@ export function RecentPapers() {
           scrollbarColor: 'rgb(75 85 99) rgb(31 41 55)'
         }}>
           <div className="flex gap-3 p-3 min-w-max">
-            {favoritePapers.map((paper) => (
+            {displayFavorites.map((paper) => (
               <div
                 key={paper.id}
                 className="flex-shrink-0 w-44 p-1.5 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
@@ -402,26 +376,7 @@ export function RecentPapers() {
                       {formatDate(paper.created_at)}
                     </span>
                     <div className="flex items-center space-x-0.5">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(paper.id, !!paper.is_favorite);
-                        }}
-                        disabled={favoriteToggling === paper.id}
-                        className={`p-1 rounded transition-all ${
-                          paper.is_favorite
-                            ? 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30'
-                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700/50'
-                        } disabled:opacity-50`}
-                        title={paper.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                        aria-pressed={paper.is_favorite}
-                      >
-                        {favoriteToggling === paper.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Heart className="h-3 w-3" fill={paper.is_favorite ? 'currentColor' : 'none'} />
-                        )}
-                      </button>
+                      <Heart className="h-3 w-3 text-red-500" fill="currentColor" />
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -510,42 +465,21 @@ export function RecentPapers() {
                       <span className="text-[10px] text-gray-500 dark:text-gray-400">
                         {formatDate(paper.created_at)}
                       </span>
-                      <div className="flex items-center space-x-0.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(paper.id, !!paper.is_favorite);
-                          }}
-                          disabled={favoriteToggling === paper.id}
-                          className={`p-1 rounded transition-all ${
-                            paper.is_favorite
-                              ? 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700/50'
-                          } disabled:opacity-50`}
-                          title={paper.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                        >
-                          {favoriteToggling === paper.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Heart className="h-3 w-3" fill={paper.is_favorite ? 'currentColor' : 'none'} />
-                          )}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deletePaper(paper.id);
-                          }}
-                          disabled={deleting === paper.id}
-                          className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-gray-700/50 transition-all disabled:opacity-50"
-                          title="Delete paper"
-                        >
-                          {deleting === paper.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3 w-3" />
-                          )}
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePaper(paper.id);
+                        }}
+                        disabled={deleting === paper.id}
+                        className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-gray-700/50 transition-all disabled:opacity-50"
+                        title="Delete paper"
+                      >
+                        {deleting === paper.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { BookOpen, FileText, Clock, Loader2, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { useAlert } from "@/lib/contexts/AlertContext";
 import { useConfirm } from "@/lib/contexts/ConfirmContext";
-import { useData } from "@/lib/contexts/DataContext";
 import { useStats } from "@/lib/contexts/StatsContext";
 import { Paper } from "@/lib/hooks/useApi";
 import {
@@ -14,24 +13,47 @@ import {
   setPreviewImage,
   hasPreview
 } from "@/lib/utils/previewCache";
+import { useCollections, useCollectionPapers, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
+import { NEXT_READ_COLLECTION_NAME } from "@/lib/constants";
 
 export function NextReadList() {
   const supabase = useSupabase();
   const router = useRouter();
   const { success: showSuccess, error: showError } = useAlert();
   const { confirmRemoveFromNextRead } = useConfirm();
-  const { papers, refreshPapers, refreshRecentReads } = useData();
   const { refreshStats } = useStats();
   const [opening, setOpening] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
   const [previewImages, setPreviewImages] = useState<Record<string, string>>({});
 
-  // Filter for Next Read papers
-  const nextReadPapers = papers?.filter(p => p.is_next_read) || [];
+  // Get Next Read collection
+  const { data: collections, refresh: refreshCollections, isLoading: collectionsLoading } = useCollections();
+  const nextReadCollection = useMemo(() =>
+    collections?.find(c => c.name === NEXT_READ_COLLECTION_NAME),
+    [collections]
+  );
+  const { data: nextReadPapersList, isLoading: papersLoading, mutate: mutateNextRead } = useCollectionPapers(
+    nextReadCollection?.id || null
+  );
+
+  // Refresh papers when collection is found
+  useEffect(() => {
+    if (nextReadCollection?.id) {
+      mutateNextRead();
+    }
+  }, [nextReadCollection?.id, mutateNextRead]);
+
+  const nextReadLoading = collectionsLoading || (nextReadCollection && papersLoading);
+
+  // Filter out any papers with processing issues
+  const nextReadPapers = useMemo(() =>
+    (nextReadPapersList || []).filter((p: Paper) => p.processing_status === 'completed' || p.processing_status === 'pending' || p.processing_status === 'processing'),
+    [nextReadPapersList]
+  );
 
   // Check if any papers are still processing
   const hasProcessingPapers = nextReadPapers.some(
-    p => p.processing_status === 'pending' || p.processing_status === 'processing'
+    (p: Paper) => p.processing_status === 'pending' || p.processing_status === 'processing'
   );
 
   // Poll for updates when papers are processing
@@ -39,11 +61,11 @@ export function NextReadList() {
     if (!hasProcessingPapers) return;
 
     const pollInterval = setInterval(() => {
-      refreshPapers();
+      mutateNextRead();
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(pollInterval);
-  }, [hasProcessingPapers, refreshPapers]);
+  }, [hasProcessingPapers, mutateNextRead]);
 
   // Generate previews for papers that don't have them yet
   useEffect(() => {
@@ -54,13 +76,14 @@ export function NextReadList() {
       }
       // Load existing cached previews (images only)
       const images: Record<string, string> = {};
-      nextReadPapers.forEach(p => {
+      nextReadPapers.forEach((p: Paper) => {
         const img = getPreviewImage(p.id);
         if (img) images[p.id] = img;
       });
       setPreviewImages(prev => ({ ...prev, ...images }));
     }
-  }, [nextReadPapers.length, nextReadPapers.map(p => p.processing_status).join(',')]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextReadPapers.length]);
 
   const generatePreviews = async (paperList: Paper[]) => {
     await Promise.all(
@@ -134,14 +157,18 @@ export function NextReadList() {
 
       if (sessionError) throw sessionError;
 
-      // Remove from Next Read
-      const { error: updateError } = await supabase
-        .from('papers')
-        .update({ is_next_read: false })
-        .eq('id', paper.id);
-
-      if (updateError) {
-        console.warn('Failed to update is_next_read:', updateError);
+      // Remove from Next Read collection
+      if (nextReadCollection) {
+        try {
+          await fetch(`/api/collections/${nextReadCollection.id}/papers/${paper.id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          invalidateCollectionCaches();
+          refreshCollections();
+        } catch (err) {
+          console.warn('Failed to remove from Next Read collection:', err);
+        }
       }
 
       // Generate summary in background
@@ -182,10 +209,8 @@ export function NextReadList() {
         // Ignore summary errors
       }
 
-      // Refresh data
+      // Refresh stats
       refreshStats();
-      refreshPapers();
-      refreshRecentReads();
 
       // Navigate to chat
       router.push(`/chat-new?session=${session.id}&paper=${paper.id}`);
@@ -202,24 +227,33 @@ export function NextReadList() {
     const confirmed = await confirmRemoveFromNextRead();
     if (!confirmed) return;
 
-    setDeleting(paper.id);
+    if (!nextReadCollection) {
+      showError('Next Read collection not found');
+      return;
+    }
+
+    setRemoving(paper.id);
 
     try {
-      const { error } = await supabase
-        .from('papers')
-        .update({ is_next_read: false })
-        .eq('id', paper.id);
+      const response = await fetch(`/api/collections/${nextReadCollection.id}/papers/${paper.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to remove from collection');
+      }
 
       showSuccess('Removed from Next Read');
+      invalidateCollectionCaches();
+      refreshCollections();
+      mutateNextRead();
       refreshStats();
-      refreshPapers();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       showError(`Failed to remove: ${errorMessage}`);
     } finally {
-      setDeleting(null);
+      setRemoving(null);
     }
   };
 
@@ -227,6 +261,30 @@ export function NextReadList() {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
+
+  if (nextReadLoading) {
+    return (
+      <div className="mt-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Next Read</h4>
+          </div>
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3 p-2 animate-pulse">
+                <div className="w-10 h-12 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6">
@@ -241,15 +299,15 @@ export function NextReadList() {
         {nextReadPapers.length === 0 ? (
           <div className="text-center py-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Add document to read next
+              No papers in your reading list
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Turn off &quot;Open immediately&quot; when uploading
+              Turn off &quot;Open immediately&quot; when uploading to add here
             </p>
           </div>
         ) : (
         <div className="space-y-2">
-          {nextReadPapers.map((paper) => (
+          {nextReadPapers.map((paper: Paper) => (
             <div
               key={paper.id}
               className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -257,7 +315,7 @@ export function NextReadList() {
               {/* Clickable area for opening paper */}
               <button
                 onClick={() => handleOpenPaper(paper)}
-                disabled={opening === paper.id || deleting === paper.id}
+                disabled={opening === paper.id || removing === paper.id}
                 className="flex-1 flex items-center gap-3 text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {/* Preview thumbnail */}
@@ -300,11 +358,11 @@ export function NextReadList() {
               {/* Remove button */}
               <button
                 onClick={(e) => handleRemoveFromNextRead(paper, e)}
-                disabled={deleting === paper.id || opening === paper.id}
+                disabled={removing === paper.id || opening === paper.id}
                 className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
                 title="Remove from Next Read"
               >
-                {deleting === paper.id ? (
+                {removing === paper.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Trash2 className="h-4 w-4" />

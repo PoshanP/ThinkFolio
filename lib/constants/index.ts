@@ -27,6 +27,7 @@ export const API_ROUTES = {
     UPLOAD: '/api/papers/upload',
     DELETE: (id: string) => `/api/papers/${id}`,
     GET: (id: string) => `/api/papers/${id}`,
+    COLLECTIONS: (id: string) => `/api/papers/${id}/collections`,
   },
   CHAT: {
     SESSIONS: '/api/chat/sessions',
@@ -36,4 +37,61 @@ export const API_ROUTES = {
     SEND_MESSAGE: '/api/chat/message',
     GET_MESSAGES: (sessionId: string) => `/api/chat/sessions/${sessionId}/messages`,
   },
+  COLLECTIONS: {
+    LIST: '/api/collections',
+    CREATE: '/api/collections',
+    GET: (id: string) => `/api/collections/${id}`,
+    UPDATE: (id: string) => `/api/collections/${id}`,
+    DELETE: (id: string) => `/api/collections/${id}`,
+    PAPERS: (id: string) => `/api/collections/${id}/papers`,
+    REMOVE_PAPER: (collectionId: string, paperId: string) => `/api/collections/${collectionId}/papers/${paperId}`,
+  },
 }
+
+// Collection color palette
+export const COLLECTION_COLORS = [
+  { name: 'Indigo', value: '#6366f1' },
+  { name: 'Rose', value: '#f43f5e' },
+  { name: 'Amber', value: '#f59e0b' },
+  { name: 'Emerald', value: '#10b981' },
+  { name: 'Sky', value: '#0ea5e9' },
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Teal', value: '#14b8a6' },
+] as const
+
+// Collection icon options
+export const COLLECTION_ICONS = [
+  'folder',
+  'document',
+  'academic',
+  'briefcase',
+  'chart',
+  'code',
+  'calculator',
+  'bookmark',
+  'lightbulb',
+  'star',
+  'heart',
+  'tag',
+] as const
+
+// Collection defaults and limits
+export const DEFAULT_COLLECTION_COLOR = '#6366f1' // Indigo
+export const DEFAULT_COLLECTION_ICON = 'folder'
+export const MAX_COLLECTIONS_PER_USER = 50
+
+// Default collections seeded for new users
+export const DEFAULT_COLLECTIONS = [
+  { name: 'Next Read', icon: 'bookmark', color: '#f59e0b', description: 'Papers to read later', is_system: true },
+  { name: 'Research', icon: 'academic', color: '#6366f1', description: 'Academic research papers', is_system: false },
+  { name: 'Favorites', icon: 'heart', color: '#f43f5e', description: 'Your favorite papers', is_system: true },
+] as const
+
+// System collections that cannot be deleted
+export const SYSTEM_COLLECTION_NAMES = ['Favorites', 'Next Read'] as const
+export const FAVORITES_COLLECTION_NAME = 'Favorites'
+export const NEXT_READ_COLLECTION_NAME = 'Next Read'
+
+// Legacy export for backwards compatibility
+export const SYSTEM_COLLECTION_NAME = 'Favorites'

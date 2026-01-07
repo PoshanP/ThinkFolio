@@ -7,11 +7,9 @@ interface DashboardStats {
   papers: number;
   chats: number;
   pages: number;
-  nextReads: number;
   papersTrend: string;
   chatsTrend: string;
   pagesTrend: string;
-  nextReadsTrend: string;
 }
 
 interface StatsContextType {
@@ -24,11 +22,9 @@ const defaultStats: DashboardStats = {
   papers: 0,
   chats: 0,
   pages: 0,
-  nextReads: 0,
   papersTrend: "+0",
   chatsTrend: "+0",
   pagesTrend: "+0",
-  nextReadsTrend: "+0",
 };
 
 const StatsContext = createContext<StatsContextType>({
@@ -52,15 +48,13 @@ export function StatsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const [papersData, chatsData, papersWithPages, nextReadsData] = await Promise.all([
+      const [papersData, chatsData, papersWithPages] = await Promise.all([
         supabase.from('papers').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('chat_sessions').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('papers').select('page_count').eq('user_id', user.id),
-        supabase.from('papers').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_next_read', true)
       ]);
 
       const totalPages = papersWithPages.data?.reduce((sum, paper) => sum + (paper.page_count || 0), 0) || 0;
-      const nextReadsCount = nextReadsData.count || 0;
 
       // Get trends (last 7 days)
       const sevenDaysAgo = new Date();
@@ -77,11 +71,9 @@ export function StatsProvider({ children }: { children: ReactNode }) {
         papers: papersData.count || 0,
         chats: chatsData.count || 0,
         pages: totalPages,
-        nextReads: nextReadsCount,
         papersTrend: `+${recentPapers.count || 0}`,
         chatsTrend: `+${recentChats.count || 0}`,
         pagesTrend: `+${Math.round(totalPages * 0.1)}`,
-        nextReadsTrend: `${nextReadsCount}`
       });
     } catch (error) {
       console.error('Error fetching stats:', error);

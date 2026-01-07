@@ -27,8 +27,6 @@ export interface Paper {
   user_id: string;
   chat_count: number;
   status: string;
-  is_favorite: boolean;
-  is_next_read: boolean;
   processing_status: 'pending' | 'processing' | 'completed' | 'failed';
   processing_error: string | null;
 }
@@ -139,26 +137,19 @@ async function fetchPapers(userId: string): Promise<Paper[]> {
     page_count: number;
     created_at: string;
     updated_at: string;
-    is_next_read: boolean;
     processing_status: 'pending' | 'processing' | 'completed' | 'failed';
     processing_error: string | null;
     document_processing_status?: Array<{ status: string }>;
   };
 
-  const [{ data: papersData, error }, favoritesResult] = await Promise.all([
-    supabase
-      .from('papers')
-      .select(`
-        *,
-        document_processing_status (status)
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('paper_favorites')
-      .select('paper_id')
-      .eq('user_id', userId)
-  ]);
+  const { data: papersData, error } = await supabase
+    .from('papers')
+    .select(`
+      *,
+      document_processing_status (status)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
 
   let papersResult: RawPaper[] | null = papersData as RawPaper[] | null;
   if (error) {
@@ -177,13 +168,6 @@ async function fetchPapers(userId: string): Promise<Paper[]> {
     }
   }
 
-  const favoritesData = favoritesResult?.data || [];
-  if (favoritesResult?.error) {
-    console.warn('Favorites table not available, continuing without favorites:', favoritesResult.error.message);
-  }
-
-  const favoriteIds = new Set(favoritesData.map(fav => fav.paper_id));
-
   // Get chat counts for each paper
   const papersWithChatCounts = await Promise.all(
     (papersResult || []).map(async (paper) => {
@@ -196,8 +180,6 @@ async function fetchPapers(userId: string): Promise<Paper[]> {
         ...paper,
         chat_count: count || 0,
         status: paper.document_processing_status?.[0]?.status || 'completed',
-        is_favorite: favoriteIds.has(paper.id),
-        is_next_read: paper.is_next_read ?? false,
         processing_status: paper.processing_status ?? 'completed',
         processing_error: paper.processing_error ?? null
       };
@@ -238,25 +220,16 @@ async function fetchRecentReads(userId: string): Promise<Paper[]> {
   });
   const uniquePaperIds = Array.from(paperIdMap.keys());
 
-  // Fetch paper details (exclude next_read papers)
+  // Fetch paper details
   const { data: papersData, error: papersError } = await supabase
     .from('papers')
     .select('*')
-    .in('id', uniquePaperIds)
-    .eq('is_next_read', false);
+    .in('id', uniquePaperIds);
 
   if (papersError || !papersData) {
     console.error('Error fetching papers:', papersError);
     return [];
   }
-
-  // Get favorites
-  const { data: favoritesData } = await supabase
-    .from('paper_favorites')
-    .select('paper_id')
-    .eq('user_id', userId);
-
-  const favoriteIds = new Set((favoritesData || []).map(fav => fav.paper_id));
 
   // Get chat counts and build final result
   const papersWithDetails = await Promise.all(
@@ -270,8 +243,6 @@ async function fetchRecentReads(userId: string): Promise<Paper[]> {
         ...paper,
         chat_count: count || 0,
         status: 'completed',
-        is_favorite: favoriteIds.has(paper.id),
-        is_next_read: paper.is_next_read ?? false,
         processing_status: paper.processing_status ?? 'completed',
         processing_error: paper.processing_error ?? null,
         last_read_at: paperIdMap.get(paper.id)
