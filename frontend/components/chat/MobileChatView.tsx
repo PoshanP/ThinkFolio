@@ -2,21 +2,10 @@
 
 import { useRef, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
-
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  created_at: string;
-  session_id: string;
-  metadata?: {
-    is_loading?: boolean;
-    is_system_summary?: boolean;
-  };
-}
+import { ChatMessage } from "@/lib/types/chat";
 
 interface MobileChatViewProps {
-  messages: Message[];
+  messages: ChatMessage[];
   input: string;
   onInputChange: (value: string) => void;
   onSendMessage: () => void;

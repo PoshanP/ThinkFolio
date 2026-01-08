@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { SUMMARY_MODEL, SUMMARY_MAX_TOKENS, MAX_SUMMARY_CONTEXT_LENGTH, TOP_K_CHUNKS } from '@/lib/constants';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,18 +73,18 @@ export async function POST(request: NextRequest) {
       .select('content')
       .eq('paper_id', paper_id)
       .order('page_no', { ascending: true })
-      .limit(5);
+      .limit(TOP_K_CHUNKS);
 
     // If we have chunks, use them. Otherwise, try to use raw PDF content
     let contextForSummary = '';
 
     if (chunks && chunks.length > 0) {
-      contextForSummary = chunks.map(c => c.content).join('\n\n').slice(0, 4000);
+      contextForSummary = chunks.map(c => c.content).join('\n\n').slice(0, MAX_SUMMARY_CONTEXT_LENGTH);
     } else if (pdfContent) {
       // Extract readable text from the PDF content (it might be garbled but often contains some text)
       const textMatch = pdfContent.match(/[\x20-\x7E\n\r]+/g);
       if (textMatch) {
-        contextForSummary = textMatch.join(' ').slice(0, 4000);
+        contextForSummary = textMatch.join(' ').slice(0, MAX_SUMMARY_CONTEXT_LENGTH);
       }
     }
 
@@ -104,7 +105,7 @@ You can inquire about complex concepts, request explanations of technical detail
 
     // Generate summary using OpenAI with whatever content we have
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: SUMMARY_MODEL,
       messages: [
         {
           role: 'system',
@@ -115,7 +116,7 @@ You can inquire about complex concepts, request explanations of technical detail
           content: `Extract the title and summarize this research paper content:\n\n${contextForSummary}`
         }
       ],
-      max_tokens: 400,
+      max_tokens: SUMMARY_MAX_TOKENS,
       temperature: 0.3,
     });
 

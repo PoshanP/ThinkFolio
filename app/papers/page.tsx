@@ -18,6 +18,7 @@ import {
 import { CollectionsSidebar, AddToCollectionModal, CollectionBadges } from "@/frontend/components/collections";
 import { useCollections, useCollectionPapers, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
 import { CollectionWithCount } from "@/lib/types/database";
+import { SIGNED_URL_EXPIRY_SECONDS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils/dateFormat";
 import { renderPdfFirstPage } from "@/lib/utils/pdfPreview";
 
@@ -155,7 +156,7 @@ function PapersPageContent() {
         if (paper.storage_path) {
           const { data, error } = await supabase.storage
             .from('papers')
-            .createSignedUrl(paper.storage_path, 60 * 60);
+            .createSignedUrl(paper.storage_path, SIGNED_URL_EXPIRY_SECONDS);
           if (!error && data?.signedUrl) {
             const img = await renderPdfFirstPage(data.signedUrl, 560);
             if (img) {

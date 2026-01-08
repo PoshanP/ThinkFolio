@@ -1,3 +1,4 @@
+export { BaseModal, ModalButton } from './BaseModal'
 export { CollectionIcon } from './CollectionIcon'
 export { ColorPicker } from './ColorPicker'
 export { IconPicker } from './IconPicker'

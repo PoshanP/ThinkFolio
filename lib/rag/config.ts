@@ -1,3 +1,5 @@
+import { CHAT_MODEL, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, TOP_K_CHUNKS, MAX_FILE_SIZE } from '../constants';
+
 export interface RAGConfig {
   openai: {
     apiKey: string;
@@ -49,8 +51,8 @@ export interface RAGConfig {
 export const defaultConfig: RAGConfig = {
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
-    model: 'gpt-4-turbo-preview',
-    embeddingModel: 'text-embedding-3-large',
+    model: CHAT_MODEL,
+    embeddingModel: EMBEDDING_MODEL,
     temperature: 0.7,
     maxTokens: 2000,
     streamingEnabled: true,
@@ -61,14 +63,14 @@ export const defaultConfig: RAGConfig = {
     collectionName: 'papers',
   },
   chunking: {
-    chunkSize: 1000,
-    chunkOverlap: 100,
+    chunkSize: CHUNK_SIZE,
+    chunkOverlap: CHUNK_OVERLAP,
     semanticChunking: false,
     minChunkSize: 200,
     maxChunkSize: 2000,
   },
   retrieval: {
-    defaultK: 5,
+    defaultK: TOP_K_CHUNKS,
     maxK: 20,
     scoreThreshold: 0.7,
     searchType: 'hybrid',
@@ -76,7 +78,7 @@ export const defaultConfig: RAGConfig = {
     rerankingEnabled: true,
   },
   processing: {
-    maxFileSize: 50 * 1024 * 1024, // 50MB
+    maxFileSize: MAX_FILE_SIZE,
     supportedFileTypes: ['pdf', 'txt', 'md', 'docx', 'json'],
     extractMetadata: true,
     ocrEnabled: false,
@@ -214,8 +216,8 @@ export function loadConfigFromEnv(): Partial<RAGConfig> {
   return {
     openai: {
       apiKey: process.env.OPENAI_API_KEY || '',
-      model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
-      embeddingModel: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-large',
+      model: process.env.OPENAI_MODEL || CHAT_MODEL,
+      embeddingModel: process.env.OPENAI_EMBEDDING_MODEL || EMBEDDING_MODEL,
       temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),
       maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '2000'),
       streamingEnabled: process.env.OPENAI_STREAMING !== 'false',
@@ -226,14 +228,14 @@ export function loadConfigFromEnv(): Partial<RAGConfig> {
       collectionName: process.env.VECTOR_COLLECTION_NAME || 'papers',
     },
     chunking: {
-      chunkSize: parseInt(process.env.CHUNK_SIZE || '1000'),
-      chunkOverlap: parseInt(process.env.CHUNK_OVERLAP || '100'),
+      chunkSize: parseInt(process.env.CHUNK_SIZE || String(CHUNK_SIZE)),
+      chunkOverlap: parseInt(process.env.CHUNK_OVERLAP || String(CHUNK_OVERLAP)),
       semanticChunking: process.env.SEMANTIC_CHUNKING === 'true',
       minChunkSize: parseInt(process.env.MIN_CHUNK_SIZE || '200'),
       maxChunkSize: parseInt(process.env.MAX_CHUNK_SIZE || '2000'),
     },
     retrieval: {
-      defaultK: parseInt(process.env.RETRIEVAL_K || '5'),
+      defaultK: parseInt(process.env.RETRIEVAL_K || String(TOP_K_CHUNKS)),
       maxK: parseInt(process.env.RETRIEVAL_MAX_K || '20'),
       scoreThreshold: parseFloat(process.env.RETRIEVAL_SCORE_THRESHOLD || '0.7'),
       searchType: (process.env.RETRIEVAL_SEARCH_TYPE as 'similarity' | 'mmr' | 'hybrid') || 'hybrid',

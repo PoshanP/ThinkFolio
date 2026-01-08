@@ -22,27 +22,18 @@ import { useConfirm } from "@/lib/contexts/ConfirmContext";
 import { useBreakpoint } from "@/lib/hooks/useMediaQuery";
 import { MobileChatLayout } from "@/frontend/components/chat/MobileChatLayout";
 import { PdfViewer } from "@/frontend/components/PdfViewer";
+import { ChatMessage, ChatSession } from "@/lib/types/chat";
+import {
+  CHAT_PANEL_DEFAULT_WIDTH,
+  CHAT_PANEL_MIN_WIDTH,
+  CHAT_PANEL_MAX_WIDTH,
+  SIDEBAR_EXPANDED_WIDTH,
+  SIDEBAR_COLLAPSED_WIDTH,
+  MESSAGE_TITLE_TRUNCATE_LENGTH,
+  SIGNED_URL_EXPIRY_SECONDS,
+} from "@/lib/constants";
 
-interface ChatSession {
-  id: string;
-  paper_id: string | null;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  paper?: {
-    title: string;
-  };
-}
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  created_at: string;
-  session_id: string;
-  metadata?: any;
-}
+type Message = ChatMessage;
 
 function ChatNewPageContent() {
   const supabase = useSupabase();
@@ -64,7 +55,7 @@ function ChatNewPageContent() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatEverOpened, setChatEverOpened] = useState(false);
-  const [chatWidth, setChatWidth] = useState(550);
+  const [chatWidth, setChatWidth] = useState(CHAT_PANEL_DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [pdfBaseUrl, setPdfBaseUrl] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
@@ -258,13 +249,13 @@ function ChatNewPageContent() {
 
       if (messagesError) throw messagesError;
 
-      const transformedMessages = (messagesData || []).map((msg, index) => ({
+      const transformedMessages: ChatMessage[] = (messagesData || []).map((msg, index) => ({
         id: `${msg.id}-${index}`,
         content: msg.content,
         role: msg.role as 'user' | 'assistant',
         created_at: msg.created_at,
         session_id: msg.session_id,
-        metadata: msg.metadata
+        metadata: msg.metadata as ChatMessage['metadata']
       }));
 
       // Cache the messages
@@ -318,7 +309,7 @@ function ChatNewPageContent() {
 
     try {
       if (messages.length === 0) {
-        const newTitle = messageContent.slice(0, 50) + (messageContent.length > 50 ? '...' : '');
+        const newTitle = messageContent.slice(0, MESSAGE_TITLE_TRUNCATE_LENGTH) + (messageContent.length > MESSAGE_TITLE_TRUNCATE_LENGTH ? '...' : '');
         await supabase
           .from('chat_sessions')
           .update({
@@ -516,7 +507,7 @@ function ChatNewPageContent() {
                 if (updatedPaper.storage_path) {
                   const { data: signed } = await supabase.storage
                     .from('papers')
-                    .createSignedUrl(updatedPaper.storage_path, 60 * 60);
+                    .createSignedUrl(updatedPaper.storage_path, SIGNED_URL_EXPIRY_SECONDS);
                   if (signed?.signedUrl) {
                     setPdfBaseUrl(signed.signedUrl);
                   }
@@ -556,7 +547,7 @@ function ChatNewPageContent() {
 
         const { data: signed, error: signedError } = await supabase.storage
           .from('papers')
-          .createSignedUrl(paper.storage_path, 60 * 60);
+          .createSignedUrl(paper.storage_path, SIGNED_URL_EXPIRY_SECONDS);
 
         if (signedError || !signed?.signedUrl) {
           console.error('Signed URL error:', signedError);
@@ -661,10 +652,10 @@ function ChatNewPageContent() {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
       e.preventDefault();
-      const sidebarWidth = sidebarOpen ? 256 : 56;
+      const sidebarWidth = sidebarOpen ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH;
       const newWidth = e.clientX - sidebarWidth;
       requestAnimationFrame(() => {
-        setChatWidth(Math.min(Math.max(280, newWidth), 800));
+        setChatWidth(Math.min(Math.max(CHAT_PANEL_MIN_WIDTH, newWidth), CHAT_PANEL_MAX_WIDTH));
       });
     };
 

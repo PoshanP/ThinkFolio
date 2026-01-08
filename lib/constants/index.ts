@@ -10,10 +10,32 @@ export const TOP_K_CHUNKS = 5
 
 export const EMBEDDING_MODEL = 'text-embedding-3-small'
 export const CHAT_MODEL = 'gpt-4o-mini'
+export const SUMMARY_MODEL = 'gpt-4o-mini' // Model for paper summaries (can use cheaper model)
+export const SUMMARY_MAX_TOKENS = 400
+export const MAX_SUMMARY_CONTEXT_LENGTH = 4000
 
 export const PAPERS_PER_PAGE = 20
 export const SESSIONS_PER_PAGE = 10
 export const MESSAGES_PER_PAGE = 50
+
+// SWR deduplication intervals (in ms)
+export const SWR_DEDUP_PROFILE = 300000 // 5 minutes
+export const SWR_DEDUP_PAPERS = 120000 // 2 minutes
+export const SWR_DEDUP_RECENT = 60000 // 1 minute
+
+// Chat UI dimensions (in px)
+export const CHAT_PANEL_DEFAULT_WIDTH = 550
+export const CHAT_PANEL_MIN_WIDTH = 280
+export const CHAT_PANEL_MAX_WIDTH = 800
+export const SIDEBAR_EXPANDED_WIDTH = 256
+export const SIDEBAR_COLLAPSED_WIDTH = 56
+
+// Session and auth
+export const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+export const SIGNED_URL_EXPIRY_SECONDS = 60 * 60 // 1 hour
+
+// Message
+export const MESSAGE_TITLE_TRUNCATE_LENGTH = 50
 
 export const API_ROUTES = {
   AUTH: {

@@ -14,7 +14,7 @@ import {
   hasPreview
 } from "@/lib/utils/previewCache";
 import { useCollections, useCollectionPapers, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
-import { NEXT_READ_COLLECTION_NAME } from "@/lib/constants";
+import { NEXT_READ_COLLECTION_NAME, SIGNED_URL_EXPIRY_SECONDS } from "@/lib/constants";
 
 export function NextReadList() {
   const supabase = useSupabase();
@@ -91,7 +91,7 @@ export function NextReadList() {
         if (paper.storage_path) {
           const signed = await supabase.storage
             .from('papers')
-            .createSignedUrl(paper.storage_path, 60 * 60);
+            .createSignedUrl(paper.storage_path, SIGNED_URL_EXPIRY_SECONDS);
 
           const pdfUrl = signed.data?.signedUrl;
           if (pdfUrl) {

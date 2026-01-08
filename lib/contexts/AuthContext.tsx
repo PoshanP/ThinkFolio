@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/hooks/useSupabase';
+import { SESSION_CHECK_INTERVAL_MS } from '@/lib/constants';
 
 const supabase = getSupabaseClient();
 
@@ -50,10 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Check session every 5 minutes
+    // Check session periodically
     const interval = setInterval(() => {
       checkSession();
-    }, 5 * 60 * 1000);
+    }, SESSION_CHECK_INTERVAL_MS);
 
     return () => {
       subscription.unsubscribe();

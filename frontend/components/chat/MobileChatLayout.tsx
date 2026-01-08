@@ -4,36 +4,13 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { MobileChatView } from "./MobileChatView";
 import { MobilePdfView } from "./MobilePdfView";
 import { MessageSquare, X, ChevronDown, Trash2, Plus, Search } from "lucide-react";
-
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  created_at: string;
-  session_id: string;
-  metadata?: {
-    is_loading?: boolean;
-    is_system_summary?: boolean;
-  };
-}
-
-interface ChatSession {
-  id: string;
-  paper_id: string | null;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  paper?: {
-    title: string;
-  };
-}
+import { ChatMessage, ChatSession } from "@/lib/types/chat";
 
 interface MobileChatLayoutProps {
   sessions: ChatSession[];
   currentSession: ChatSession | null;
   filterPaperId: string | null;
-  messages: Message[];
+  messages: ChatMessage[];
   input: string;
   onInputChange: (value: string) => void;
   onSendMessage: () => void;

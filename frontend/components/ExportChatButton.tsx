@@ -4,24 +4,14 @@ import { useState } from "react";
 import { Download, Loader2, FileText, File } from "lucide-react";
 import { exportChatAsPDF, exportChatAsTXT } from "@/lib/utils/export-chat";
 import { useAlert } from "@/lib/contexts/AlertContext";
+import { ChatMessage } from "@/lib/types/chat";
 
 interface ExportChatButtonProps {
   sessionId: string;
   sessionTitle: string;
   paperTitle?: string;
   sessionDate: string;
-  messages: Array<{
-    id: string;
-    content: string;
-    role: 'user' | 'assistant';
-    created_at: string;
-    metadata?: {
-      citations?: Array<{
-        page_no: number;
-        score: number;
-      }>;
-    };
-  }>;
+  messages: ChatMessage[];
 }
 
 export function ExportChatButton({
