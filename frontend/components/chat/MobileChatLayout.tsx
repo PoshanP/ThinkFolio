@@ -14,6 +14,7 @@ interface Message {
   metadata?: {
     is_loading?: boolean;
     is_system_summary?: boolean;
+    isStreaming?: boolean;
   };
 }
 

@@ -95,3 +95,15 @@ export const NEXT_READ_COLLECTION_NAME = 'Next Read'
 
 // Legacy export for backwards compatibility
 export const SYSTEM_COLLECTION_NAME = 'Favorites'
+
+// Streaming UI constants
+export const STREAMING_UI = {
+  /** Animation delay between dots in milliseconds */
+  DOT_ANIMATION_DELAYS: [0, 150, 300] as const,
+  /** Messages shown during different streaming states */
+  MESSAGES: {
+    THINKING: 'Thinking...',
+    GENERATING: 'Generating response...',
+    GENERATING_SUMMARY: 'Generating summary...',
+  },
+} as const

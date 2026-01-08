@@ -17,6 +17,8 @@ import {
   PanelLeft
 } from "lucide-react";
 import { ExportChatButton } from "@/frontend/components/ExportChatButton";
+import { StreamingIndicator, StreamingCursor, ThinkingDots } from "@/frontend/components/StreamingIndicator";
+import { STREAMING_UI } from "@/lib/constants";
 import { useStats } from "@/lib/contexts/StatsContext";
 import { useConfirm } from "@/lib/contexts/ConfirmContext";
 import { useBreakpoint } from "@/lib/hooks/useMediaQuery";
@@ -70,6 +72,8 @@ function ChatNewPageContent() {
   const [processingStatus, setProcessingStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [isThinking, setIsThinking] = useState(false);
   const pdfLoadedRef = useRef<boolean>(false);
   const resizeRef = useRef<HTMLDivElement>(null);
   const initialPaperIdRef = useRef<string | null>(null);
@@ -334,12 +338,36 @@ function ChatNewPageContent() {
         }
       }
 
-      let assistantContent = "";
-
       // Use the session from when the request started
       const sessionForRequest = sessions.find(s => s.id === sessionIdAtStart);
 
       if (sessionForRequest?.paper_id) {
+        // Create placeholder assistant message for streaming
+        const assistantMessageId = `temp-assistant-${Date.now()}-${messageCounter.current++}`;
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          content: '',
+          role: 'assistant',
+          created_at: new Date().toISOString(),
+          session_id: sessionIdAtStart,
+          metadata: { isStreaming: true }
+        };
+
+        // Add empty assistant message and set thinking state
+        const updatedCacheWithAssistant = [...updatedCacheWithUser, assistantMessage];
+        setMessagesCache(prev => ({
+          ...prev,
+          [sessionIdAtStart]: updatedCacheWithAssistant
+        }));
+
+        if (currentSession?.id === sessionIdAtStart) {
+          setMessages(updatedCacheWithAssistant);
+        }
+
+        setStreamingMessageId(assistantMessageId);
+        setIsThinking(true);
+
+        // Use streaming API
         const response = await fetch('/api/rag/query', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -348,44 +376,132 @@ function ChatNewPageContent() {
             paperId: sessionForRequest.paper_id,
             sessionId: sessionIdAtStart,
             userId: user.id,
+            stream: true,
           }),
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          assistantContent = data.answer;
-        } else {
-          assistantContent = "Sorry, I encountered an error processing your question about the paper.";
+        if (!response.ok) {
+          throw new Error('Failed to get response');
         }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedContent = '';
+
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+
+                    if (data.error) {
+                      throw new Error(data.error);
+                    }
+
+                    if (data.chunk) {
+                      // First chunk received - no longer "thinking"
+                      if (isThinking) {
+                        setIsThinking(false);
+                      }
+
+                      accumulatedContent += data.chunk;
+
+                      // Update the message content progressively
+                      setMessages(prevMessages =>
+                        prevMessages.map(msg =>
+                          msg.id === assistantMessageId
+                            ? { ...msg, content: accumulatedContent }
+                            : msg
+                        )
+                      );
+
+                      // Also update cache
+                      setMessagesCache(prev => ({
+                        ...prev,
+                        [sessionIdAtStart]: prev[sessionIdAtStart]?.map(msg =>
+                          msg.id === assistantMessageId
+                            ? { ...msg, content: accumulatedContent }
+                            : msg
+                        ) || []
+                      }));
+                    }
+
+                    if (data.done) {
+                      // Streaming complete - update metadata to remove streaming flag
+                      setMessages(prevMessages =>
+                        prevMessages.map(msg =>
+                          msg.id === assistantMessageId
+                            ? { ...msg, metadata: { ...msg.metadata, isStreaming: false, citations: data.citations } }
+                            : msg
+                        )
+                      );
+
+                      setMessagesCache(prev => ({
+                        ...prev,
+                        [sessionIdAtStart]: prev[sessionIdAtStart]?.map(msg =>
+                          msg.id === assistantMessageId
+                            ? { ...msg, metadata: { ...msg.metadata, isStreaming: false, citations: data.citations } }
+                            : msg
+                        ) || []
+                      }));
+                    }
+                  } catch {
+                    // Skip malformed JSON lines
+                    console.warn('Failed to parse SSE data:', line);
+                  }
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        }
+
+        setStreamingMessageId(null);
+        setIsThinking(false);
+
       } else {
-        assistantContent = "I'm ready to help! Upload a paper to enable document-specific conversations, or ask me any general questions.";
+        const assistantContent = "I'm ready to help! Upload a paper to enable document-specific conversations, or ask me any general questions.";
+
+        const assistantMessage: Message = {
+          id: `temp-assistant-${Date.now()}-${messageCounter.current++}`,
+          content: assistantContent,
+          role: 'assistant',
+          created_at: new Date().toISOString(),
+          session_id: sessionIdAtStart
+        };
+
+        // Update cache first
+        const updatedCacheWithAssistant = [...updatedCacheWithUser, assistantMessage];
+        setMessagesCache(prev => ({
+          ...prev,
+          [sessionIdAtStart]: updatedCacheWithAssistant
+        }));
+
+        // Only update messages if we're still on the same session - read from cache
+        setCurrentSession(currentSessionAtUpdate => {
+          if (currentSessionAtUpdate?.id === sessionIdAtStart) {
+            setMessages(updatedCacheWithAssistant);
+          }
+          return currentSessionAtUpdate;
+        });
       }
-
-      const assistantMessage: Message = {
-        id: `temp-assistant-${Date.now()}-${messageCounter.current++}`,
-        content: assistantContent,
-        role: 'assistant',
-        created_at: new Date().toISOString(),
-        session_id: sessionIdAtStart
-      };
-
-      // Update cache first
-      const updatedCacheWithAssistant = [...updatedCacheWithUser, assistantMessage];
-      setMessagesCache(prev => ({
-        ...prev,
-        [sessionIdAtStart]: updatedCacheWithAssistant
-      }));
-
-      // Only update messages if we're still on the same session - read from cache
-      setCurrentSession(currentSessionAtUpdate => {
-        if (currentSessionAtUpdate?.id === sessionIdAtStart) {
-          setMessages(updatedCacheWithAssistant);
-        }
-        return currentSessionAtUpdate;
-      });
 
     } catch (error) {
       console.error('Error sending message:', error);
+
+      // Clean up streaming state
+      setStreamingMessageId(null);
+      setIsThinking(false);
+
       const errorMessage: Message = {
         id: `temp-error-${Date.now()}-${messageCounter.current++}`,
         content: "Sorry, I encountered an error. Please try again.",
@@ -394,8 +510,11 @@ function ChatNewPageContent() {
         session_id: sessionIdAtStart
       };
 
-      // Update cache first
-      const updatedCacheWithError = [...updatedCacheWithUser, errorMessage];
+      // Update cache first - replace any streaming message with error
+      const currentCache = messagesCache[sessionIdAtStart] || [];
+      const updatedCacheWithError = currentCache.filter(msg => !msg.metadata?.isStreaming);
+      updatedCacheWithError.push(errorMessage);
+
       setMessagesCache(prev => ({
         ...prev,
         [sessionIdAtStart]: updatedCacheWithError
@@ -917,12 +1036,15 @@ function ChatNewPageContent() {
                                 <div className="px-2 py-1">
                                   <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Generating summary...</span>
+                                    <span>{STREAMING_UI.MESSAGES.GENERATING_SUMMARY}</span>
                                   </div>
                                 </div>
+                              ) : message.metadata?.isStreaming && !message.content ? (
+                                <StreamingIndicator isThinking={true} isStreaming={false} />
                               ) : (
                                 <div className="text-gray-900 dark:text-gray-100 px-2 py-1 whitespace-pre-wrap text-sm leading-relaxed">
                                   {message.content}
+                                  {message.metadata?.isStreaming && <StreamingCursor />}
                                 </div>
                               )}
                             </div>
@@ -930,11 +1052,10 @@ function ChatNewPageContent() {
                         )}
                       </div>
                     ))}
-                    {currentSession && loadingSessions.has(currentSession.id) && (
-                      <div className="flex items-center gap-2 px-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    {currentSession && loadingSessions.has(currentSession.id) && !streamingMessageId && (
+                      <div className="flex items-center gap-2 px-2 py-1 text-gray-500 dark:text-gray-400">
+                        <ThinkingDots />
+                        <span className="text-xs">{STREAMING_UI.MESSAGES.THINKING}</span>
                       </div>
                     )}
                     <div ref={messagesEndRef} />

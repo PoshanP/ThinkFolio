@@ -2,6 +2,8 @@
 
 import { useRef, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
+import { StreamingIndicator, StreamingCursor, ThinkingDots } from "@/frontend/components/StreamingIndicator";
+import { STREAMING_UI } from "@/lib/constants";
 
 interface Message {
   id: string;
@@ -12,6 +14,7 @@ interface Message {
   metadata?: {
     is_loading?: boolean;
     is_system_summary?: boolean;
+    isStreaming?: boolean;
   };
 }
 
@@ -93,12 +96,15 @@ export function MobileChatView({
                       {message.metadata?.is_loading ? (
                         <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Generating summary...</span>
+                          <span>{STREAMING_UI.MESSAGES.GENERATING_SUMMARY}</span>
                         </div>
+                      ) : message.metadata?.isStreaming && !message.content ? (
+                        <StreamingIndicator isThinking={true} isStreaming={false} />
                       ) : (
                         <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-2.5">
                           <div className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap text-sm leading-relaxed">
                             {message.content}
+                            {message.metadata?.isStreaming && <StreamingCursor />}
                           </div>
                         </div>
                       )}
@@ -107,20 +113,10 @@ export function MobileChatView({
                 )}
               </div>
             ))}
-            {isLoading && (
-              <div className="flex items-center gap-2 px-2">
-                <div
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <div
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <div
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
+            {isLoading && !messages.some(m => m.metadata?.isStreaming) && (
+              <div className="flex items-center gap-2 px-2 py-1 text-gray-500 dark:text-gray-400">
+                <ThinkingDots />
+                <span className="text-xs">{STREAMING_UI.MESSAGES.THINKING}</span>
               </div>
             )}
             <div ref={messagesEndRef} />
