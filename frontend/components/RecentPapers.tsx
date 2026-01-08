@@ -15,7 +15,7 @@ import {
   clearPreview
 } from "@/lib/utils/previewCache";
 import { useCollections, useCollectionPapers } from "@/lib/hooks/useCollections";
-import { SYSTEM_COLLECTION_NAME } from "@/lib/constants";
+import { SYSTEM_COLLECTION_NAME, SIGNED_URL_EXPIRY_SECONDS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils/dateFormat";
 import { renderPdfFirstPage } from "@/lib/utils/pdfPreview";
 
@@ -110,7 +110,7 @@ export function RecentPapers() {
         if (paper.storage_path) {
           const signed = await supabase.storage
             .from('papers')
-            .createSignedUrl(paper.storage_path, 60 * 60);
+            .createSignedUrl(paper.storage_path, SIGNED_URL_EXPIRY_SECONDS);
 
           const pdfUrl = signed.data?.signedUrl;
 

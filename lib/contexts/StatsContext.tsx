@@ -107,16 +107,3 @@ export function useStats() {
   }
   return context;
 }
-
-// Export a standalone refresh function for use outside of React components
-let refreshStatsCallback: (() => Promise<void>) | null = null;
-
-export function setRefreshStatsCallback(callback: () => Promise<void>) {
-  refreshStatsCallback = callback;
-}
-
-export async function refreshStatsGlobal() {
-  if (refreshStatsCallback) {
-    await refreshStatsCallback();
-  }
-}

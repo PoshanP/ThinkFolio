@@ -1,6 +1,7 @@
 import useSWR from 'swr';
 import { getSupabaseClient } from '@/lib/hooks/useSupabase';
 import { useEffect, useState } from 'react';
+import { SWR_DEDUP_PROFILE, SWR_DEDUP_PAPERS, SWR_DEDUP_RECENT } from '@/lib/constants';
 
 const supabase = getSupabaseClient();
 
@@ -260,8 +261,8 @@ async function fetchRecentReads(userId: string): Promise<Paper[]> {
   return papersWithDetails;
 }
 
-// Custom hooks
-export function useDashboardStats() {
+// Shared hook for user ID retrieval
+function useUserId() {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -271,6 +272,14 @@ export function useDashboardStats() {
     };
     getUser();
   }, []);
+
+  const clearUserId = () => setUserId(null);
+  return { userId, clearUserId };
+}
+
+// Custom hooks
+export function useDashboardStats() {
+  const { userId, clearUserId } = useUserId();
 
   return useSWR<DashboardStats>(
     userId ? `dashboard-stats|${userId}` : null,
@@ -279,10 +288,10 @@ export function useDashboardStats() {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       revalidateIfStale: false,
-      dedupingInterval: 60000, // 1 minute
+      dedupingInterval: SWR_DEDUP_RECENT,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
-          setUserId(null);
+          clearUserId();
         }
       }
     }
@@ -290,15 +299,7 @@ export function useDashboardStats() {
 }
 
 export function useProfileData() {
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUser();
-  }, []);
+  const { userId, clearUserId } = useUserId();
 
   return useSWR<ProfileData>(
     userId ? `profile-data|${userId}` : null,
@@ -307,28 +308,18 @@ export function useProfileData() {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       revalidateIfStale: false,
-      dedupingInterval: 300000, // 5 minutes
+      dedupingInterval: SWR_DEDUP_PROFILE,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
-          setUserId(null);
+          clearUserId();
         }
       }
     }
   );
 }
 
-
-
 export function usePapers() {
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUser();
-  }, []);
+  const { userId, clearUserId } = useUserId();
 
   return useSWR<Paper[]>(
     userId ? `papers|${userId}` : null,
@@ -337,10 +328,10 @@ export function usePapers() {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       revalidateIfStale: false,
-      dedupingInterval: 120000, // 2 minutes
+      dedupingInterval: SWR_DEDUP_PAPERS,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
-          setUserId(null);
+          clearUserId();
         }
       }
     }
@@ -348,15 +339,7 @@ export function usePapers() {
 }
 
 export function useRecentReads() {
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUser();
-  }, []);
+  const { userId, clearUserId } = useUserId();
 
   return useSWR<Paper[]>(
     userId ? `recent-reads|${userId}` : null,
@@ -365,10 +348,10 @@ export function useRecentReads() {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       revalidateIfStale: false,
-      dedupingInterval: 60000, // 1 minute
+      dedupingInterval: SWR_DEDUP_RECENT,
       onError: (error) => {
         if (error?.message?.includes('JWT') || error?.message?.includes('auth')) {
-          setUserId(null);
+          clearUserId();
         }
       }
     }

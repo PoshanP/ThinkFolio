@@ -54,8 +54,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useDataContext = () => useContext(DataContext);
-
 export const useData = () => {
   const context = useContext(DataContext);
   return {

@@ -46,15 +46,6 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Hide scrollbar on mobile for cleaner UI */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 /* Hide scrollbar utility */
 .scrollbar-hide {
   -ms-overflow-style: none;
