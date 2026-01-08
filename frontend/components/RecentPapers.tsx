@@ -16,6 +16,8 @@ import {
 } from "@/lib/utils/previewCache";
 import { useCollections, useCollectionPapers } from "@/lib/hooks/useCollections";
 import { SYSTEM_COLLECTION_NAME } from "@/lib/constants";
+import { formatDate } from "@/lib/utils/dateFormat";
+import { renderPdfFirstPage } from "@/lib/utils/pdfPreview";
 
 
 
@@ -125,33 +127,6 @@ export function RecentPapers() {
     );
   };
 
-  const renderPdfFirstPage = async (url: string): Promise<string | null> => {
-    try {
-      const pdfjs = await import('pdfjs-dist');
-      const { getDocument, GlobalWorkerOptions } = pdfjs;
-      // Set worker source to local file
-      GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-
-      const loadingTask = getDocument(url);
-      const pdf = await loadingTask.promise;
-      const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 1 });
-      const targetWidth = 420;
-      const scale = targetWidth / viewport.width;
-      const scaledViewport = page.getViewport({ scale });
-
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = scaledViewport.width;
-      canvas.height = scaledViewport.height;
-
-      await page.render({ canvasContext: context!, viewport: scaledViewport, canvas } as Parameters<typeof page.render>[0]).promise;
-      return canvas.toDataURL('image/png');
-    } catch (err) {
-      console.warn('PDF preview render failed, falling back:', err);
-      return null;
-    }
-  };
 
 
 
@@ -240,21 +215,7 @@ export function RecentPapers() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-    return date.toLocaleDateString();
-  };
-
-
-  // Display all favorite papers
+  // Display all favorite papers from the collection
   const displayFavorites = useMemo(() =>
     favoritePapers || [],
     [favoritePapers]
@@ -297,19 +258,19 @@ export function RecentPapers() {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2 sm:mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
               Favourite Documents
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">
               Quick access to the papers you loved
             </p>
           </div>
           <button
             onClick={() => router.push('/papers')}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline pr-2"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 min-h-[44px] flex items-center"
           >
             See all
           </button>
@@ -402,14 +363,14 @@ export function RecentPapers() {
       )}
 
       {/* Recent Reads Section */}
-      <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-        <div className="flex items-center justify-between mb-4 px-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="mt-4 sm:mt-6 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 px-4">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             Recent Reads
           </h3>
           <button
             onClick={() => router.push('/papers')}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline pr-2"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 min-h-[44px] flex items-center"
           >
             See all
           </button>

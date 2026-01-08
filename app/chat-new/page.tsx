@@ -19,6 +19,9 @@ import {
 import { ExportChatButton } from "@/frontend/components/ExportChatButton";
 import { useStats } from "@/lib/contexts/StatsContext";
 import { useConfirm } from "@/lib/contexts/ConfirmContext";
+import { useBreakpoint } from "@/lib/hooks/useMediaQuery";
+import { MobileChatLayout } from "@/frontend/components/chat/MobileChatLayout";
+import { PdfViewer } from "@/frontend/components/PdfViewer";
 
 interface ChatSession {
   id: string;
@@ -45,6 +48,7 @@ function ChatNewPageContent() {
   const supabase = useSupabase();
   const { confirmDeleteConversation } = useConfirm();
   const { refreshStats } = useStats();
+  const { isMobile, isTablet } = useBreakpoint();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -58,7 +62,8 @@ function ChatNewPageContent() {
   const [messagesCache, setMessagesCache] = useState<{[sessionId: string]: Message[]}>({});
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatEverOpened, setChatEverOpened] = useState(false);
   const [chatWidth, setChatWidth] = useState(550);
   const [isResizing, setIsResizing] = useState(false);
   const [pdfBaseUrl, setPdfBaseUrl] = useState<string | null>(null);
@@ -142,6 +147,7 @@ function ChatNewPageContent() {
 
     if (sessionId) {
       loadSession(sessionId);
+      // Don't auto-open chat - user must click to open
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionsFetched]);
@@ -205,6 +211,7 @@ function ChatNewPageContent() {
       setMessages([]);
       setSessions(prev => [session, ...prev]);
       setChatOpen(true);
+      setChatEverOpened(true);
     } catch (error) {
       console.error('Error creating session:', error);
     }
@@ -689,6 +696,39 @@ function ChatNewPageContent() {
     };
   }, [isResizing, sidebarOpen]);
 
+  // Mobile & Tablet layout (< 1024px)
+  if (isMobile || isTablet) {
+    return (
+      <div className="fixed inset-0 z-50 h-screen bg-white dark:bg-gray-900" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
+        <MobileChatLayout
+          sessions={sessions}
+          currentSession={currentSession}
+          filterPaperId={filterPaperId}
+          messages={messages}
+          input={input}
+          onInputChange={setInput}
+          onSendMessage={sendMessage}
+          isMessageLoading={currentSession ? loadingSessions.has(currentSession.id) : false}
+          loadingSession={loadingSession}
+          onSessionSelect={(session) => {
+            setCurrentSession(session);
+            loadSession(session.id);
+          }}
+          onSessionDelete={deleteSession}
+          onNewSession={createNewSession}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          pdfUrl={pdfBaseUrl}
+          pdfLoading={previewLoading}
+          processingStatus={processingStatus}
+          processingError={processingError}
+          onBack={() => router.back()}
+        />
+      </div>
+    );
+  }
+
+  // Desktop layout
   return (
     <div className="fixed inset-0 z-50 flex h-screen bg-white dark:bg-gray-900" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
       {/* Sidebar */}
@@ -763,6 +803,7 @@ function ChatNewPageContent() {
                   loadSession(session.id);
                 }
                 setChatOpen(true);
+                setChatEverOpened(true);
               }}
               title={!sidebarOpen ? session.title : undefined}
             >
@@ -824,9 +865,10 @@ function ChatNewPageContent() {
       <div className="flex-1 flex flex-col">
         {currentSession ? (
             <div className="flex-1 flex bg-gray-50 dark:bg-gray-900 overflow-hidden">
-              {/* Chat panel */}
+              {/* Chat panel - only render after first open to prevent flash */}
+              {chatEverOpened && (
               <div
-                className="flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-[margin] duration-300 ease-in-out"
+                className="flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col"
                 style={{
                   width: chatWidth,
                   marginLeft: chatOpen ? 0 : -chatWidth
@@ -863,7 +905,7 @@ function ChatNewPageContent() {
                         {message.role === 'user' ? (
                           <div className="flex justify-end">
                             <div className="max-w-[320px]">
-                              <div className="bg-blue-600 text-white rounded-xl px-3 py-2 shadow-md">
+                              <div className="bg-indigo-600 text-white rounded-xl px-3 py-2 shadow-md">
                                 <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
                               </div>
                             </div>
@@ -920,6 +962,7 @@ function ChatNewPageContent() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Resize handle - invisible, just cursor change at edge */}
               {chatOpen && (
@@ -932,39 +975,14 @@ function ChatNewPageContent() {
 
               {/* PDF viewer */}
               <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-                {(processingStatus === 'pending' || processingStatus === 'processing') ? (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-6">
-                    <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                    <p className="text-sm font-medium mb-2">Processing document...</p>
-                    <p className="text-xs text-center max-w-sm">
-                      Your document is being analyzed. This usually takes 10-30 seconds.
-                    </p>
-                  </div>
-                ) : processingStatus === 'failed' ? (
-                  <div className="h-full flex flex-col items-center justify-center text-red-500 dark:text-red-400 px-6">
-                    <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                      <X className="h-6 w-6" />
-                    </div>
-                    <p className="text-sm font-medium mb-2">Processing failed</p>
-                    <p className="text-xs text-center max-w-sm text-gray-500 dark:text-gray-400">
-                      {processingError || 'An error occurred while processing your document.'}
-                    </p>
-                  </div>
-                ) : previewLoading ? (
-                  <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  </div>
-                ) : pdfBaseUrl ? (
-                  <iframe
-                    src={pdfBaseUrl}
-                    className="w-full h-full border-0 bg-gray-50 dark:bg-gray-900"
-                    title="PDF Viewer"
-                  />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 px-6 text-sm">
-                    No PDF preview available for this chat.
-                  </div>
-                )}
+                <PdfViewer
+                  pdfUrl={pdfBaseUrl}
+                  isLoading={previewLoading}
+                  processingStatus={processingStatus}
+                  processingError={processingError}
+                  onChatOpen={!chatOpen ? () => { setChatOpen(true); setChatEverOpened(true); } : undefined}
+                  messageCount={messages.filter(m => !m.metadata?.is_loading && !m.metadata?.is_system_summary).length}
+                />
               </div>
           </div>
         ) : (

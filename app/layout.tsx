@@ -23,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -52,7 +53,7 @@ export default function RootLayout({
                 <DataProvider>
                   <StatsProvider>
                     <div className="min-h-screen bg-white dark:bg-gray-900">
-                      <main className="container mx-auto px-6 py-6 max-w-7xl">
+                      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl">
                         {children}
                       </main>
                     </div>

@@ -361,8 +361,8 @@ export function UploadSection() {
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Upload Document
         </h3>
 
@@ -425,7 +425,7 @@ export function UploadSection() {
                 value={documentName}
                 onChange={(e) => setDocumentName(e.target.value)}
                 placeholder="Enter document name..."
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
               />
             </div>
 
@@ -434,7 +434,7 @@ export function UploadSection() {
               <button
                 type="button"
                 onClick={() => setOpenImmediately(true)}
-                className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
+                className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                   openImmediately
                     ? 'bg-indigo-600 text-white'
                     : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -445,7 +445,7 @@ export function UploadSection() {
               <button
                 type="button"
                 onClick={() => setOpenImmediately(false)}
-                className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
+                className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                   !openImmediately
                     ? 'bg-amber-500 text-white'
                     : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -458,7 +458,7 @@ export function UploadSection() {
             <button
               onClick={() => handleSubmit(selectedFile)}
               disabled={!documentName.trim()}
-              className={`w-full text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed ${
+              className={`w-full text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed min-h-[48px] ${
                 openImmediately
                   ? 'bg-indigo-600 hover:bg-indigo-700'
                   : 'bg-amber-500 hover:bg-amber-600'
@@ -511,7 +511,7 @@ export function UploadSection() {
                 value={pdfUrl}
                 onChange={(e) => setPdfUrl(e.target.value)}
                 placeholder="https://example.com/document.pdf"
-                className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 ${
+                className={`w-full px-3 py-3 text-base border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 min-h-[44px] ${
                   urlError
                     ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                     : isValidUrl
@@ -539,7 +539,7 @@ export function UploadSection() {
                     value={documentName}
                     onChange={(e) => setDocumentName(e.target.value)}
                     placeholder="Enter document name..."
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
                   />
                 </div>
 
@@ -548,7 +548,7 @@ export function UploadSection() {
                   <button
                     type="button"
                     onClick={() => setOpenImmediately(true)}
-                    className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
+                    className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                       openImmediately
                         ? 'bg-indigo-600 text-white'
                         : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -559,7 +559,7 @@ export function UploadSection() {
                   <button
                     type="button"
                     onClick={() => setOpenImmediately(false)}
-                    className={`flex-1 py-2 px-3 text-sm font-medium transition-colors ${
+                    className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                       !openImmediately
                         ? 'bg-amber-500 text-white'
                         : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -572,7 +572,7 @@ export function UploadSection() {
                 <button
                   onClick={handleUrlSubmit}
                   disabled={!documentName.trim()}
-                  className={`w-full text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed ${
+                  className={`w-full text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed min-h-[48px] ${
                     openImmediately
                       ? 'bg-indigo-600 hover:bg-indigo-700'
                       : 'bg-amber-500 hover:bg-amber-600'
