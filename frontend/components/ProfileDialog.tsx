@@ -103,16 +103,24 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   }
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 dark:border-blue-400 p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      {/* Backdrop for click-to-close */}
+      <div
+        className="absolute inset-0 bg-black/30"
+        onClick={onClose}
+      />
+      <div className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg border-t-2 sm:border-2 border-blue-500 dark:border-blue-400 p-4 sm:p-6 w-full sm:max-w-md max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Mobile drag indicator */}
+        <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4 sm:hidden" />
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Profile Information</h2>
-          <div className="flex items-center space-x-3">
-{!isEditing ? (
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Profile Information</h2>
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm"
+                className="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm min-h-[44px]"
               >
                 Edit
               </button>
@@ -123,16 +131,16 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
                   setName(profileData.profile?.name || "");
                   setBio(profileData.profile?.bio || "");
                 }}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                className="px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm min-h-[44px]"
               >
                 Cancel
               </button>
             )}
             <button
               onClick={onClose}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded-lg"
+              className="p-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -148,7 +156,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] text-base"
                 placeholder="Enter your full name"
               />
             ) : (
@@ -162,7 +170,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
             </label>
             <div className="flex items-center space-x-2 py-2">
               <Mail className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              <p className="text-gray-900 dark:text-white">{profileData.user?.email}</p>
+              <p className="text-gray-900 dark:text-white text-sm sm:text-base break-all">{profileData.user?.email}</p>
             </div>
           </div>
 
@@ -175,7 +183,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                 placeholder="Tell us about yourself..."
               />
             ) : (
@@ -188,11 +196,11 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
 
         {/* Save Button */}
         {isEditing && (
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-4 sm:mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg disabled:opacity-50 text-sm w-full transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg disabled:opacity-50 text-sm w-full transition-colors min-h-[48px]"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -205,7 +213,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
         )}
 
         {/* Theme Settings */}
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-4 sm:mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Theme Preference
           </label>
@@ -213,10 +221,10 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
         </div>
 
         {/* Sign Out Button */}
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-4 sm:mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 pb-safe">
           <button
             onClick={handleSignOut}
-            className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg w-full justify-center"
+            className="flex items-center space-x-2 px-3 py-3 text-sm bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg w-full justify-center min-h-[48px]"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign Out</span>

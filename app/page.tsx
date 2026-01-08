@@ -21,47 +21,47 @@ export default function Home() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <button
             onClick={() => router.push('/')}
             className="text-left hover:opacity-80 transition-opacity"
           >
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
               ThinkFolio
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
               Reading that talks back. Think faster. Struggle less.
             </p>
           </button>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
           <Link
             href="/papers"
             prefetch={true}
-            className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+            className="flex items-center space-x-2 px-3 py-2.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors min-h-[44px]"
           >
             <FileText className="h-4 w-4" />
-            <span>My Library</span>
+            <span className="hidden xs:inline">My Library</span>
           </Link>
 
           <button
             onClick={() => setIsProfileOpen(true)}
-            className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-full transition-colors"
+            className="p-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-full transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
-            <User className="h-4 w-4" />
+            <User className="h-5 w-5" />
           </button>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
                 {loading ? "..." : stats?.papers || 0}
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">Documents</p>
@@ -70,10 +70,10 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
                 {loading ? "..." : stats?.chats || 0}
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">Chats</p>
@@ -82,10 +82,10 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
                 {loading ? "..." : stats?.pages || 0}
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">Pages</p>
@@ -94,10 +94,10 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
                 {collectionsLoading ? "..." : collections?.length || 0}
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">Collections</p>
@@ -107,29 +107,29 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Papers Section */}
-        <div className="lg:col-span-2">
-          <RecentPapers />
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
+      {/* Main Content Grid - Upload first on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Sidebar - Shows first on mobile, last on desktop */}
+        <div className="space-y-4 sm:space-y-6 lg:order-last">
           <CollectionsWidget />
           <UploadSection />
           <NextReadList />
         </div>
+
+        {/* Papers Section */}
+        <div className="lg:col-span-2 lg:order-first">
+          <RecentPapers />
+        </div>
       </div>
 
       {/* Powered by DevSwarm */}
-      <div className="mt-12 pt-8 border-t border-gray-300 dark:border-gray-700">
+      <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-300 dark:border-gray-700">
         <div className="text-center">
           <a
             href="https://devswarm.ai/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors group"
+            className="inline-flex items-center space-x-2 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors group min-h-[44px]"
           >
             <span>Powered by</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}

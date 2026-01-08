@@ -18,6 +18,8 @@ import {
 import { CollectionsSidebar, AddToCollectionModal, CollectionBadges } from "@/frontend/components/collections";
 import { useCollections, useCollectionPapers, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
 import { CollectionWithCount } from "@/lib/types/database";
+import { formatDate } from "@/lib/utils/dateFormat";
+import { renderPdfFirstPage } from "@/lib/utils/pdfPreview";
 
 // Loading skeleton component
 function PapersPageSkeleton() {
@@ -155,7 +157,7 @@ function PapersPageContent() {
             .from('papers')
             .createSignedUrl(paper.storage_path, 60 * 60);
           if (!error && data?.signedUrl) {
-            const img = await renderPdfFirstPage(data.signedUrl);
+            const img = await renderPdfFirstPage(data.signedUrl, 560);
             if (img) {
               setPreviewImage(paper.id, img);
               setPreviewImages(prev => ({ ...prev, [paper.id]: img }));
@@ -164,32 +166,6 @@ function PapersPageContent() {
         }
       })
     );
-  };
-
-  const renderPdfFirstPage = async (url: string): Promise<string | null> => {
-    try {
-      const pdfjs = await import('pdfjs-dist');
-      const { getDocument, GlobalWorkerOptions } = pdfjs;
-      GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-      const loadingTask = getDocument(url);
-      const pdf = await loadingTask.promise;
-      const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 1 });
-      const targetWidth = 400;
-      const scale = targetWidth / viewport.width;
-      const scaledViewport = page.getViewport({ scale });
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = scaledViewport.width;
-      canvas.height = scaledViewport.height;
-      context!.fillStyle = '#ffffff';
-      context!.fillRect(0, 0, canvas.width, canvas.height);
-      await page.render({ canvasContext: context!, viewport: scaledViewport, canvas } as Parameters<typeof page.render>[0]).promise;
-      return canvas.toDataURL('image/png');
-    } catch (err) {
-      console.warn('PDF preview render failed:', err);
-      return null;
-    }
   };
 
   const deletePaper = async (paperId: string) => {
@@ -247,18 +223,6 @@ function PapersPageContent() {
     } catch (err) {
       console.error('Error opening chat session:', err);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
   };
 
   const handleCollectionSelect = (collectionId: string | null) => {
@@ -335,13 +299,13 @@ function PapersPageContent() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/')}
-            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <button
             onClick={() => setMobileSidebarOpen(true)}
-            className="lg:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="lg:hidden p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -371,7 +335,7 @@ function PapersPageContent() {
                 <h2 className="font-semibold text-gray-900 dark:text-white">Collections</h2>
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-2.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -395,7 +359,7 @@ function PapersPageContent() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search papers..."
-              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[44px]"
             />
           </div>
 
@@ -413,7 +377,7 @@ function PapersPageContent() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredPapers.map((paper) => (
                 <div
                   key={paper.id}
@@ -463,7 +427,7 @@ function PapersPageContent() {
                             e.stopPropagation();
                             setAddToCollectionPaper({ id: paper.id, title: paper.title });
                           }}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors"
+                          className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                           title="Add to collection"
                         >
                           <FolderPlus className="h-4 w-4" />
@@ -474,7 +438,7 @@ function PapersPageContent() {
                             deletePaper(paper.id);
                           }}
                           disabled={deleting === paper.id}
-                          className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors disabled:opacity-50"
+                          className="p-2 text-gray-400 hover:text-red-500 rounded transition-colors disabled:opacity-50 min-h-[36px] min-w-[36px] flex items-center justify-center"
                           title="Delete"
                         >
                           {deleting === paper.id ? (
