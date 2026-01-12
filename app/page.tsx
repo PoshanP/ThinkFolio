@@ -41,6 +41,7 @@ export default function Home() {
           <Link
             href="/papers"
             prefetch={true}
+            title="My Library"
             className="flex items-center space-x-2 px-3 py-2.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors min-h-[44px]"
           >
             <FileText className="h-4 w-4" />
