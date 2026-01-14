@@ -1,10 +1,43 @@
 import commonContent from './common.json';
 import authContent from './auth.json';
+import landingContent from './landing.json';
 
 // Type definitions
 export interface FeatureItem {
   title: string;
   description: string;
+}
+
+export interface StepItem {
+  step: string;
+  title: string;
+  description: string;
+}
+
+export interface LandingContent {
+  hero: {
+    title: string;
+    subtitle: string;
+    primaryCta: string;
+    secondaryCta: string;
+  };
+  features: {
+    title: string;
+    items: FeatureItem[];
+  };
+  moreFeatures: {
+    title: string;
+    items: FeatureItem[];
+  };
+  howItWorks: {
+    title: string;
+    steps: StepItem[];
+  };
+  cta: {
+    title: string;
+    subtitle: string;
+    button: string;
+  };
 }
 
 export interface CommonContent {
@@ -81,6 +114,7 @@ export interface AuthContent {
 // Typed exports
 export const common: CommonContent = commonContent;
 export const auth: AuthContent = authContent;
+export const landing: LandingContent = landingContent;
 
 // Convenience exports
 export const brand = common.brand;

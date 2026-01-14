@@ -6,17 +6,34 @@ import { RecentPapers } from "@/frontend/components/RecentPapers";
 import { NextReadList } from "@/frontend/components/NextReadList";
 import { ProfileDialog } from "@/frontend/components/ProfileDialog";
 import { CollectionsWidget } from "@/frontend/components/collections";
-import { FileText, MessageSquare, BookOpen, User, FolderOpen } from "lucide-react";
+import { LandingPage } from "@/frontend/components/LandingPage";
+import { FileText, MessageSquare, BookOpen, User, FolderOpen, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStats } from "@/lib/contexts/StatsContext";
 import { useCollections } from "@/lib/hooks/useCollections";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export default function Home() {
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { stats, loading } = useStats();
   const { data: collections, isLoading: collectionsLoading } = useCollections();
+  const { user, loading: authLoading } = useAuth();
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
+      </div>
+    );
+  }
+
+  // Show landing page for unauthenticated users
+  if (!user) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="space-y-6">

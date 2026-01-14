@@ -1,0 +1,75 @@
+{
+  "hero": {
+    "title": "Read and understand research papers",
+    "subtitle": "A smart PDF reader that lets you read your papers and ask questions about anything you don't understand. Get instant answers with precise citations.",
+    "primaryCta": "Get Started",
+    "secondaryCta": "Sign In"
+  },
+  "features": {
+    "title": "Everything you need to understand research",
+    "items": [
+      {
+        "title": "Read Your PDFs",
+        "description": "A clean, distraction-free PDF reader built for research. Read your papers comfortably with full navigation."
+      },
+      {
+        "title": "Ask Questions",
+        "description": "Stuck on a concept? Just ask. Get clear explanations for anything you don't understand in the paper."
+      },
+      {
+        "title": "Precise Citations",
+        "description": "Every answer comes with exact page references so you can jump right to the source and verify."
+      },
+      {
+        "title": "Create Collections",
+        "description": "Organize your research into custom collections. Group papers by topic, project, or however you work best."
+      }
+    ]
+  },
+  "moreFeatures": {
+    "title": "Designed for researchers",
+    "items": [
+      {
+        "title": "Access Anywhere",
+        "description": "Your papers are securely stored in the cloud. Read and chat with your library from any device, anywhere."
+      },
+      {
+        "title": "AI-Powered Insights",
+        "description": "Powered by advanced AI to understand complex academic language and break down difficult concepts for you."
+      },
+      {
+        "title": "Save for Later",
+        "description": "Build your reading queue with papers you want to explore. Never lose track of important research again."
+      },
+      {
+        "title": "Dark Mode",
+        "description": "Easy on the eyes during those late-night reading sessions. Full dark mode support throughout the app."
+      }
+    ]
+  },
+  "howItWorks": {
+    "title": "How it works",
+    "steps": [
+      {
+        "step": "1",
+        "title": "Upload your PDF",
+        "description": "Drag and drop or browse to upload your research paper. We support files up to 5MB."
+      },
+      {
+        "step": "2",
+        "title": "Read your paper",
+        "description": "Open your PDF in our clean reader. Navigate pages, zoom, and read comfortably."
+      },
+      {
+        "step": "3",
+        "title": "Ask when stuck",
+        "description": "Don't understand something? Ask the AI and get clear explanations with page citations."
+      }
+    ]
+  },
+  "cta": {
+    "title": "Ready to read smarter?",
+    "subtitle": "Join researchers who understand papers faster with ThinkFolio. Free to get started.",
+    "button": "Create Free Account"
+  }
+}
