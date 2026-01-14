@@ -70,8 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Session error:', error);
         setUser(null);
 
-        // Only redirect to login if we're not already on auth pages
-        if (!window.location.pathname.startsWith('/auth/')) {
+        // Only redirect to login if we're not on auth pages or home page (landing page)
+        const pathname = window.location.pathname;
+        if (!pathname.startsWith('/auth/') && pathname !== '/') {
           router.push('/auth/login');
         }
         return;
@@ -79,7 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!session) {
         setUser(null);
-        if (!window.location.pathname.startsWith('/auth/')) {
+        const pathname = window.location.pathname;
+        if (!pathname.startsWith('/auth/') && pathname !== '/') {
           router.push('/auth/login');
         }
       } else {

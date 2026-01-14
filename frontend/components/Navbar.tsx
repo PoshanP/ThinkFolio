@@ -3,20 +3,16 @@
 import Link from "next/link";
 import { FileText, User, LogOut, Menu } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, signOut } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const publicPaths = ["/auth/login", "/auth/signup"];
-    setIsAuthenticated(!publicPaths.includes(pathname));
-  }, [pathname]);
+  const isAuthenticated = !!user;
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -33,12 +29,11 @@ export function Navbar() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [isUserMenuOpen]);
 
-  const handleSignOut = useCallback(() => {
+  const handleSignOut = useCallback(async () => {
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
-    setIsAuthenticated(false);
-    router.push("/auth/login");
-  }, [router]);
+    await signOut();
+  }, [signOut]);
 
   const closeMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(false);
