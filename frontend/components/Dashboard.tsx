@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStats } from "@/lib/contexts/StatsContext";
 import { useCollections } from "@/lib/hooks/useCollections";
+import { BRAND, ROUTES, STYLE_CLASSES, EXTERNAL_LINKS, BRAND_COPY } from "@/lib/constants";
 
 export function Dashboard() {
   const router = useRouter();
@@ -24,14 +25,14 @@ export function Dashboard() {
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push(ROUTES.home)}
             className="text-left hover:opacity-80 transition-opacity"
           >
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-              ThinkFolio
+            <h1 className={`text-xl sm:text-2xl font-semibold ${STYLE_CLASSES.textPrimary}`}>
+              {BRAND.name}
             </h1>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
-              Reading that talks back. Think faster. Struggle less.
+            <p className={`text-xs sm:text-sm ${STYLE_CLASSES.textSecondary} mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none`}>
+              {BRAND.tagline} {BRAND.subTagline}
             </p>
           </button>
         </div>
@@ -39,12 +40,12 @@ export function Dashboard() {
         {/* Actions */}
         <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
           <Link
-            href="/papers"
+            href={ROUTES.papers}
             prefetch={true}
-            className="flex items-center space-x-2 px-3 py-2.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors min-h-[44px]"
+            className={`flex items-center space-x-2 px-3 py-2.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-lg transition-colors ${STYLE_CLASSES.touchTarget}`}
           >
             <FileText className="h-4 w-4" />
-            <span className="hidden xs:inline">My Library</span>
+            <span className="hidden sm:inline">My Library</span>
           </Link>
 
           <button
@@ -58,7 +59,7 @@ export function Dashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
+        <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
@@ -70,7 +71,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
+        <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
@@ -82,7 +83,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
+        <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
@@ -94,7 +95,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
+        <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
@@ -123,19 +124,19 @@ export function Dashboard() {
       </div>
 
       {/* Powered by DevSwarm */}
-      <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-300 dark:border-gray-700">
+      <div className={`mt-8 sm:mt-12 pt-6 sm:pt-8 ${STYLE_CLASSES.borderSection}`}>
         <div className="text-center">
           <a
-            href="https://devswarm.ai/"
+            href={EXTERNAL_LINKS.devswarm.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors group min-h-[44px]"
+            className={`inline-flex items-center space-x-2 px-4 py-3 text-sm ${STYLE_CLASSES.textSecondary} hover:text-gray-800 dark:hover:text-gray-300 transition-colors group ${STYLE_CLASSES.touchTarget}`}
           >
-            <span>Powered by</span>
+            <span>{BRAND_COPY.footer.poweredBy}</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://cdn.prod.website-files.com/684228174606b26ec8e3e29e/684b4952707b6e17b3ef79df_Logo.png"
-              alt="DevSwarm"
+              src={EXTERNAL_LINKS.devswarm.logo}
+              alt={EXTERNAL_LINKS.devswarm.alt}
               className="h-5 group-hover:opacity-80 transition-opacity"
             />
           </a>
