@@ -63,3 +63,20 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Twinkling star animation */
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.1;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+.animate-twinkle {
+  animation: twinkle ease-in-out infinite;
+  opacity: 0.15;
+}
