@@ -138,7 +138,7 @@ export function NextReadList() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/auth/login');
+        router.push('/auth');
         return;
       }
 
@@ -265,7 +265,7 @@ export function NextReadList() {
   if (nextReadLoading) {
     return (
       <div className="mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
             <h4 className="text-sm font-medium text-gray-900 dark:text-white">Next Read</h4>

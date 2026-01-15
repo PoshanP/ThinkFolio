@@ -1,5 +1,14 @@
-export const APP_NAME = 'ThinkFolio'
-export const APP_DESCRIPTION = 'Research Paper RAG Chat App'
+// Re-export all constants for convenience
+export * from './branding'
+export * from './assets'
+export * from './routes'
+export * from './ui'
+export * from './features'
+
+// Legacy exports for backwards compatibility
+import { BRAND } from './branding'
+export const APP_NAME = BRAND.name
+export const APP_DESCRIPTION = BRAND.metaDescription
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 export const ALLOWED_FILE_TYPES = ['application/pdf']

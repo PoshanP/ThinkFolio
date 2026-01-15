@@ -7,12 +7,14 @@ import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 import { AlertProvider } from "@/lib/contexts/AlertContext";
 import { StatsProvider } from "@/lib/contexts/StatsContext";
 import { ConfirmProvider } from "@/lib/contexts/ConfirmContext";
+import { StarryBackground } from "@/frontend/components/StarryBackground";
+import { BRAND } from "@/lib/constants";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ThinkFolio - AI Document Chat",
-  description: "Upload, analyze, and chat with PDFs, books, and documents using AI",
+  title: `${BRAND.name} - AI Document Chat`,
+  description: BRAND.metaDescription,
 };
 
 export default function RootLayout({
@@ -52,7 +54,8 @@ export default function RootLayout({
               <AuthProvider>
                 <DataProvider>
                   <StatsProvider>
-                    <div className="min-h-screen bg-white dark:bg-gray-900">
+                    <StarryBackground />
+                    <div className="min-h-screen relative z-10">
                       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl">
                         {children}
                       </main>

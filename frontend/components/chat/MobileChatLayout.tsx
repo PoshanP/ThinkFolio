@@ -132,7 +132,7 @@ export function MobileChatLayout({
   }, [sessionSelectorOpen]);
 
   return (
-    <div className="relative flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="relative flex flex-col h-full">
       {/* PDF View - Full Screen (Default) */}
       <MobilePdfView
         pdfUrl={pdfUrl}
@@ -149,7 +149,7 @@ export function MobileChatLayout({
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/30 backdrop-blur-sm">
           <div
             ref={chatPanelRef}
-            className="bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl flex flex-col animate-slide-up"
+            className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-t-2xl shadow-2xl flex flex-col animate-slide-up"
             style={{ height: '85vh', maxHeight: '85vh' }}
           >
             {/* Chat Panel Header */}
@@ -191,7 +191,7 @@ export function MobileChatLayout({
             {sessionSelectorOpen && (
               <div
                 ref={sessionSelectorRef}
-                className="absolute top-16 left-4 right-4 z-10 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-[300px] overflow-hidden flex flex-col"
+                className="absolute top-16 left-4 right-4 z-10 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-[300px] overflow-hidden flex flex-col"
               >
                 {/* Search */}
                 <div className="p-3 border-b border-gray-200 dark:border-gray-700">

@@ -164,7 +164,7 @@ function ChatNewPageContent() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push("/auth/login");
+        router.push("/auth");
         return;
       }
 
@@ -699,7 +699,7 @@ function ChatNewPageContent() {
   // Mobile & Tablet layout (< 1024px)
   if (isMobile || isTablet) {
     return (
-      <div className="fixed inset-0 z-50 h-screen bg-white dark:bg-gray-900" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
+      <div className="fixed inset-0 z-50 h-screen" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
         <MobileChatLayout
           sessions={sessions}
           currentSession={currentSession}
@@ -730,9 +730,9 @@ function ChatNewPageContent() {
 
   // Desktop layout
   return (
-    <div className="fixed inset-0 z-50 flex h-screen bg-white dark:bg-gray-900" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
+    <div className="fixed inset-0 z-50 flex h-screen" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-14'} transition-all duration-300 bg-gray-100 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 flex flex-col`}>
+      <div className={`${sidebarOpen ? 'w-64' : 'w-14'} transition-all duration-300 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-sm border-r border-gray-300 dark:border-gray-700 flex flex-col`}>
         {/* Header */}
         <div className={`p-3 border-b border-gray-200 dark:border-gray-700 flex ${sidebarOpen ? 'items-center justify-between' : 'flex-col items-center gap-2'}`}>
           {sidebarOpen ? (
@@ -864,11 +864,11 @@ function ChatNewPageContent() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {currentSession ? (
-            <div className="flex-1 flex bg-gray-50 dark:bg-gray-900 overflow-hidden">
+            <div className="flex-1 flex overflow-hidden">
               {/* Chat panel - only render after first open to prevent flash */}
               {chatEverOpened && (
               <div
-                className="flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col"
+                className="flex-shrink-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-r border-gray-200 dark:border-gray-800 flex flex-col"
                 style={{
                   width: chatWidth,
                   marginLeft: chatOpen ? 0 : -chatWidth
@@ -974,7 +974,7 @@ function ChatNewPageContent() {
               )}
 
               {/* PDF viewer */}
-              <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+              <div className="flex-1 overflow-hidden">
                 <PdfViewer
                   pdfUrl={pdfBaseUrl}
                   isLoading={previewLoading}
@@ -1015,7 +1015,7 @@ function ChatNewPageContent() {
 
 export default function ChatNewPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-gray-900 dark:text-white">Loading...</div>}>
       <ChatNewPageContent />
     </Suspense>
   );
