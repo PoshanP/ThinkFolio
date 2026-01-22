@@ -2,7 +2,7 @@ import { Chroma } from '@langchain/community/vectorstores/chroma';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
 import { SupabaseVectorStore } from '@langchain/community/vectorstores/supabase';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ChromaClient } from 'chromadb';
 
 export interface VectorStoreConfig {
@@ -16,7 +16,7 @@ export interface VectorStoreConfig {
 
 export interface RetrievalOptions {
   k?: number;
-  filter?: Record<string, any>;
+  filter?: Record<string, string | number | boolean>;
   scoreThreshold?: number;
   searchType?: 'similarity' | 'mmr' | 'hybrid';
   fetchK?: number;
@@ -27,7 +27,7 @@ export class VectorStoreManager {
   private embeddings: OpenAIEmbeddings;
   private vectorStore: Chroma | SupabaseVectorStore | null = null;
   private config: VectorStoreConfig;
-  private supabaseClient: any;
+  private supabaseClient: SupabaseClient | null = null;
   private chromaClient: ChromaClient | null = null;
   private isInitialized: boolean = false;
 
@@ -92,6 +92,10 @@ export class VectorStoreManager {
       filter = { paper_id: paperId };
     }
 
+    if (!this.supabaseClient) {
+      throw new Error('Supabase client not initialized');
+    }
+
     this.vectorStore = await SupabaseVectorStore.fromExistingIndex(this.embeddings, {
       client: this.supabaseClient,
       tableName: 'paper_chunks',
@@ -116,59 +120,64 @@ export class VectorStoreManager {
       throw new Error('Supabase client not initialized');
     }
 
-    const { k = 20, filter } = options;
+    const { k = 20, filter, scoreThreshold = 0.5 } = options;
     const paperId = filter?.paper_id;
 
-    // FOR DEBUGGING: Return ALL chunks for this paper instead of similarity search
-    console.log('DEBUG: Getting ALL chunks for paper:', paperId);
-
-    // First, let's see what papers exist in the database
-    const { data: allPapers, error: paperError } = await this.supabaseClient
-      .from('paper_chunks')
-      .select('paper_id')
-      .limit(10);
-
-    console.log('DEBUG: Available paper IDs in database:', allPapers?.map((p: any) => p.paper_id));
-    console.log('DEBUG: Paper query error:', paperError);
-    console.log('DEBUG: Using supabase URL:', this.supabaseClient.supabaseUrl);
-
-    // Also try getting the total count
-    const { count, error: countError } = await this.supabaseClient
-      .from('paper_chunks')
-      .select('*', { count: 'exact', head: true });
-
-    console.log('DEBUG: Total chunks in database:', count, 'count error:', countError);
-
-    const { data, error } = await this.supabaseClient
-      .from('paper_chunks')
-      .select('id, content, page_no, paper_id')
-      .eq('paper_id', paperId)
-      .limit(k);
-
-    if (error) {
-      console.error('Error fetching chunks:', error);
-      throw new Error(`Database error: ${error.message}`);
+    if (!paperId) {
+      throw new Error('Paper ID is required for similarity search');
     }
 
-    console.log('DEBUG: Found chunks:', data?.length || 0);
+    // Generate embedding for the query
+    const queryEmbedding = await this.embeddings.embedQuery(query);
+
+    // Use Supabase RPC for vector similarity search
+    const { data, error } = await this.supabaseClient.rpc('match_paper_chunks', {
+      query_embedding: queryEmbedding,
+      match_threshold: scoreThreshold,
+      match_count: k,
+      filter_paper_id: paperId
+    });
+
+    if (error) {
+      // Fallback to basic search if RPC function doesn't exist
+      const { data: fallbackData, error: fallbackError } = await this.supabaseClient
+        .from('paper_chunks')
+        .select('id, content, page_no, paper_id')
+        .eq('paper_id', paperId)
+        .limit(k);
+
+      if (fallbackError) {
+        throw new Error(`Database error: ${fallbackError.message}`);
+      }
+
+      if (!fallbackData || fallbackData.length === 0) {
+        return [];
+      }
+
+      return fallbackData.map((chunk: { id: string; content: string; page_no: number; paper_id: string }) => new Document({
+        pageContent: chunk.content,
+        metadata: {
+          id: chunk.id,
+          pageNumber: chunk.page_no,
+          paper_id: chunk.paper_id
+        }
+      }));
+    }
 
     if (!data || data.length === 0) {
-      console.log('DEBUG: No chunks found for paper ID:', paperId);
       return [];
     }
 
-    // Convert to Document format
-    const documents = data.map((chunk: any) => new Document({
+    // Convert to Document format with similarity scores
+    return data.map((chunk: { id: string; content: string; page_no: number; paper_id: string; similarity?: number }) => new Document({
       pageContent: chunk.content,
       metadata: {
         id: chunk.id,
-        page_no: chunk.page_no,
-        paper_id: chunk.paper_id
+        pageNumber: chunk.page_no,
+        paper_id: chunk.paper_id,
+        score: chunk.similarity || 0
       }
     }));
-
-    console.log('DEBUG: Returning documents:', documents.length);
-    return documents;
   }
 
   async maxMarginalRelevanceSearch(
@@ -186,8 +195,8 @@ export class VectorStoreManager {
       try {
         // @ts-expect-error - LangChain version compatibility issue
         return await this.vectorStore.maxMarginalRelevanceSearch(query, k, fetchK);
-      } catch (error) {
-        console.warn('MMR search failed, falling back to similarity search:', error);
+      } catch {
+        // MMR search failed, falling back to similarity search
       }
     }
 
@@ -242,6 +251,10 @@ export class VectorStoreManager {
     const searchTerms = query.toLowerCase().split(' ')
       .filter(term => term.length > 2);
 
+    if (searchTerms.length === 0) {
+      return [];
+    }
+
     const { data, error } = await this.supabaseClient
       .from('paper_chunks')
       .select('id, content, page_no')
@@ -250,11 +263,10 @@ export class VectorStoreManager {
       .limit(options.k);
 
     if (error || !data) {
-      console.error('Keyword search error:', error);
       return [];
     }
 
-    return data.map((chunk: any) =>
+    return data.map((chunk: { id: string; content: string; page_no: number }) =>
       new Document({
         pageContent: chunk.content,
         metadata: {
@@ -273,8 +285,8 @@ export class VectorStoreManager {
     if (this.config.type === 'chroma' && this.chromaClient) {
       try {
         await this.chromaClient.deleteCollection({ name: `paper_${paperId}` });
-      } catch (error) {
-        console.error('Error deleting collection:', error);
+      } catch {
+        // Collection may not exist, ignore error
       }
     } else if (this.config.type === 'supabase' && this.supabaseClient) {
       await this.supabaseClient

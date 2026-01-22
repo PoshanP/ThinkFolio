@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Upload, MessageSquare, BookOpen, Sparkles, ArrowRight, CheckCircle, FileText } from "lucide-react";
+import { Upload, MessageSquare, BookOpen, Sparkles, ArrowRight, CheckCircle, FileText, Zap, FileCheck, Users, MessagesSquare, Files } from "lucide-react";
 import {
   BRAND,
   BRAND_COPY,
@@ -39,19 +39,29 @@ export function LandingPage() {
         {/* Hero Section */}
         <section className="py-8 sm:py-12 lg:py-16">
           <div className="text-center max-w-4xl mx-auto">
+            {/* AI-Powered Badge */}
+            <div className="flex justify-center mb-6">
+              <div className="badge-shimmer inline-flex items-center gap-2 px-4 py-2 rounded-full border border-indigo-200 dark:border-indigo-700">
+                <Zap className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                  AI-Powered Document Intelligence
+                </span>
+              </div>
+            </div>
+
             <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-bold ${STYLE_CLASSES.textPrimary} leading-tight`}>
               {BRAND_COPY.hero.title}
-              <span className="block text-indigo-600 dark:text-indigo-400 mt-2">
+              <span className="block gradient-text mt-2">
                 {BRAND_COPY.hero.subtitle}
               </span>
             </h1>
             <p className={`mt-6 text-lg sm:text-xl ${STYLE_CLASSES.textSecondary} max-w-2xl mx-auto`}>
               {BRAND_COPY.hero.description}
             </p>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href={ROUTES.auth}
-                className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonPrimary} px-8 py-3 rounded-lg ${STYLE_CLASSES.touchTargetComfortable}`}
+                className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonPrimary} px-8 py-3 rounded-lg ${STYLE_CLASSES.touchTargetComfortable} animate-pulse-glow`}
               >
                 {BRAND_COPY.hero.cta}
                 <ArrowRight className={ICON_SIZES.xs} />
@@ -74,12 +84,13 @@ export function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {BRAND_COPY.howItWorks.steps.map((step, index) => {
               const Icon = HOW_IT_WORKS_ICONS[index];
+              const isLast = index === BRAND_COPY.howItWorks.steps.length - 1;
               return (
                 <div
                   key={index}
-                  className={`${STYLE_CLASSES.sectionBg} rounded-xl p-6 sm:p-8 ${STYLE_CLASSES.borderDefault} border`}
+                  className={`${STYLE_CLASSES.sectionBg} rounded-xl p-6 sm:p-8 ${STYLE_CLASSES.borderDefault} border card-hover ${!isLast ? 'step-connector' : ''}`}
                 >
-                  <div className={`${FEATURE_ICON_CONTAINER.md} ${FEATURE_COLORS.indigo.bg} ${FEATURE_COLORS.indigo.bgDark} rounded-lg flex items-center justify-center mb-4`}>
+                  <div className={`${FEATURE_ICON_CONTAINER.md} ${FEATURE_COLORS.indigo.bg} ${FEATURE_COLORS.indigo.bgDark} rounded-lg flex items-center justify-center mb-4 animate-float`} style={{ animationDelay: `${index * 0.2}s` }}>
                     <Icon className={`${ICON_SIZES.md} ${FEATURE_COLORS.indigo.text} ${FEATURE_COLORS.indigo.textDark}`} />
                   </div>
                   <h3 className={`text-lg font-semibold ${STYLE_CLASSES.textPrimary} mb-2`}>
@@ -111,10 +122,10 @@ export function LandingPage() {
               return (
                 <div
                   key={feature.id}
-                  className={`${STYLE_CLASSES.sectionBg} rounded-lg p-5 ${STYLE_CLASSES.borderDefault} border`}
+                  className={`${STYLE_CLASSES.sectionBg} rounded-lg p-5 ${STYLE_CLASSES.borderDefault} border feature-card-hover group`}
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className={`${FEATURE_ICON_CONTAINER.sm} ${feature.color.bg} ${feature.color.bgDark} rounded-lg flex items-center justify-center`}>
+                    <div className={`${FEATURE_ICON_CONTAINER.sm} ${feature.color.bg} ${feature.color.bgDark} rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
                       <Icon className={`${ICON_SIZES.sm} ${feature.color.text} ${feature.color.textDark}`} />
                     </div>
                     <h3 className={`font-semibold ${STYLE_CLASSES.textPrimary}`}>{feature.title}</h3>
@@ -147,9 +158,11 @@ export function LandingPage() {
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-indigo-100 dark:border-indigo-800">
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-indigo-100 dark:border-indigo-800 card-hover">
               <div className="flex items-center gap-3 mb-4">
-                <Sparkles className={`${ICON_SIZES.md} text-indigo-600 dark:text-indigo-400`} />
+                <div className="animate-float">
+                  <Sparkles className={`${ICON_SIZES.md} text-indigo-600 dark:text-indigo-400`} />
+                </div>
                 <h3 className={`text-lg font-semibold ${STYLE_CLASSES.textPrimary}`}>
                   {BRAND_COPY.benefits.aiCard.title}
                 </h3>
@@ -167,20 +180,26 @@ export function LandingPage() {
 
         {/* CTA Section */}
         <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
-          <div className={`text-center ${STYLE_CLASSES.sectionBg} rounded-xl p-8 sm:p-12 ${STYLE_CLASSES.borderDefault} border`}>
-            <h2 className={`text-2xl sm:text-3xl font-bold ${STYLE_CLASSES.textPrimary} mb-4`}>
-              {BRAND_COPY.cta.title}
-            </h2>
-            <p className={`${STYLE_CLASSES.textSecondary} mb-6 max-w-xl mx-auto`}>
-              {BRAND_COPY.cta.description}
-            </p>
-            <Link
-              href={ROUTES.auth}
-              className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonPrimary} px-8 py-3 rounded-lg ${STYLE_CLASSES.touchTargetComfortable}`}
-            >
-              {BRAND_COPY.hero.ctaSecondary}
-              <ArrowRight className={ICON_SIZES.xs} />
-            </Link>
+          <div className="text-center cta-gradient rounded-xl p-8 sm:p-12 border border-indigo-200 dark:border-indigo-800 relative overflow-hidden">
+            {/* Decorative elements */}
+            <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+
+            <div className="relative">
+              <h2 className={`text-2xl sm:text-3xl font-bold ${STYLE_CLASSES.textPrimary} mb-4`}>
+                {BRAND_COPY.cta.title}
+              </h2>
+              <p className={`${STYLE_CLASSES.textSecondary} mb-6 max-w-xl mx-auto`}>
+                {BRAND_COPY.cta.description}
+              </p>
+              <Link
+                href={ROUTES.auth}
+                className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonPrimary} px-8 py-3 rounded-lg ${STYLE_CLASSES.touchTargetComfortable} hover:scale-105 transition-transform duration-300`}
+              >
+                {BRAND_COPY.hero.ctaSecondary}
+                <ArrowRight className={ICON_SIZES.xs} />
+              </Link>
+            </div>
           </div>
         </section>
 

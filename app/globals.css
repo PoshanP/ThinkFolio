@@ -80,3 +80,249 @@ body {
   animation: twinkle ease-in-out infinite;
   opacity: 0.15;
 }
+
+/* Floating animation for icons */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Pulse glow animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(99, 102, 241, 0.2);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4);
+}
+
+/* Feature card glow on hover */
+.feature-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 8px 30px -8px rgba(99, 102, 241, 0.3);
+}
+
+.dark .feature-card-hover:hover {
+  border-color: rgba(129, 140, 248, 0.5);
+  box-shadow: 0 8px 30px -8px rgba(129, 140, 248, 0.2);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Badge shimmer effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.badge-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0.1) 0%,
+    rgba(139, 92, 246, 0.2) 50%,
+    rgba(99, 102, 241, 0.1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Step connector line */
+.step-connector {
+  position: relative;
+}
+
+.step-connector::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -1rem;
+  width: 2rem;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.5), rgba(99, 102, 241, 0.1));
+}
+
+@media (max-width: 768px) {
+  .step-connector::after {
+    display: none;
+  }
+}
+
+/* Gradient CTA background */
+.cta-gradient {
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.1) 0%,
+    rgba(139, 92, 246, 0.1) 50%,
+    rgba(217, 70, 239, 0.05) 100%
+  );
+}
+
+.dark .cta-gradient {
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.2) 0%,
+    rgba(139, 92, 246, 0.15) 50%,
+    rgba(217, 70, 239, 0.1) 100%
+  );
+}
+
+/* Hero gradient orbs */
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: orb-pulse 8s ease-in-out infinite;
+}
+
+@keyframes orb-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.6;
+  }
+}
+
+/* Animated gradient border button */
+.gradient-border-btn {
+  position: relative;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #d946ef);
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.gradient-border-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  padding: 3px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #d946ef, #6366f1);
+  background-size: 300% 300%;
+  animation: gradient-rotate 4s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+@keyframes gradient-rotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Stats counter animation */
+.stat-number {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* File format badge */
+.format-badge {
+  transition: all 0.3s ease;
+}
+
+.format-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* Arrow connector for how it works */
+.arrow-connector {
+  position: relative;
+}
+
+.arrow-connector::after {
+  content: '→';
+  position: absolute;
+  top: 50%;
+  right: -1.5rem;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  color: rgba(99, 102, 241, 0.5);
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .arrow-connector::after {
+    display: none;
+  }
+}
+
+/* Benefit item animation */
+.benefit-item {
+  transition: all 0.3s ease;
+}
+
+.benefit-item:hover {
+  transform: translateX(4px);
+}
+
+.benefit-item:hover .benefit-check {
+  transform: scale(1.2);
+}
+
+.benefit-check {
+  transition: transform 0.3s ease;
+}
+
+/* Glow effect for stats */
+.stat-glow {
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.1);
+}
+
+.dark .stat-glow {
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.15);
+}
