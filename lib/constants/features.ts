@@ -34,16 +34,16 @@ export interface Feature {
  */
 export const FEATURE_COLORS = {
   purple: {
-    bg: 'bg-purple-100',
-    bgDark: 'dark:bg-purple-900/30',
-    text: 'text-purple-600',
-    textDark: 'dark:text-purple-400',
+    bg: 'bg-sky-100',
+    bgDark: 'dark:bg-sky-900/30',
+    text: 'text-sky-600',
+    textDark: 'dark:text-sky-400',
   },
   blue: {
-    bg: 'bg-blue-100',
-    bgDark: 'dark:bg-blue-900/30',
-    text: 'text-blue-600',
-    textDark: 'dark:text-blue-400',
+    bg: 'bg-cyan-100',
+    bgDark: 'dark:bg-cyan-900/30',
+    text: 'text-cyan-600',
+    textDark: 'dark:text-cyan-400',
   },
   green: {
     bg: 'bg-green-100',
@@ -76,10 +76,16 @@ export const FEATURE_COLORS = {
     textDark: 'dark:text-teal-400',
   },
   indigo: {
-    bg: 'bg-indigo-100',
-    bgDark: 'dark:bg-indigo-900/30',
-    text: 'text-indigo-600',
-    textDark: 'dark:text-indigo-400',
+    bg: 'bg-sky-100',
+    bgDark: 'dark:bg-sky-900/30',
+    text: 'text-sky-600',
+    textDark: 'dark:text-sky-400',
+  },
+  amber: {
+    bg: 'bg-amber-100',
+    bgDark: 'dark:bg-amber-900/30',
+    text: 'text-amber-600',
+    textDark: 'dark:text-amber-400',
   },
   pink: {
     bg: 'bg-pink-100',
