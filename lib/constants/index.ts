@@ -93,8 +93,12 @@ export const MAX_COLLECTIONS_PER_USER = 50
 // Default collections seeded for new users
 export const DEFAULT_COLLECTIONS = [
   { name: 'Next Read', icon: 'bookmark', color: '#f59e0b', description: 'Papers to read later', is_system: true },
-  { name: 'Research', icon: 'academic', color: '#6366f1', description: 'Academic research papers', is_system: false },
+  { name: 'Research Papers', icon: 'academic', color: '#6366f1', description: 'Academic research papers', is_system: false },
   { name: 'Favorites', icon: 'heart', color: '#f43f5e', description: 'Your favorite papers', is_system: true },
+  { name: 'Tax Documents', icon: 'briefcase', color: '#10b981', description: 'Tax-related documents', is_system: false },
+  { name: 'Insurance Documents', icon: 'folder', color: '#14b8a6', description: 'Insurance policies and claims', is_system: false },
+  { name: 'Legal Documents', icon: 'document', color: '#0ea5e9', description: 'Contracts, agreements, and legal papers', is_system: false },
+  { name: 'Terms & Agreements', icon: 'tag', color: '#a855f7', description: 'Terms of service and user agreements', is_system: false },
 ] as const
 
 // System collections that cannot be deleted
