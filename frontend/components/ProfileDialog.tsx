@@ -8,6 +8,7 @@ import { useProfileData } from "@/lib/hooks/useApi";
 import { ThemeToggle } from "./ThemeToggle";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { useAlert } from "@/lib/contexts/AlertContext";
+import { STYLE_CLASSES } from "@/lib/constants";
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -83,7 +84,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
       <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
         <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-6 w-full max-w-md shadow-2xl">
           <div className="flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" />
+            <Loader2 className={`h-8 w-8 animate-spin ${STYLE_CLASSES.spinnerColor}`} />
           </div>
         </div>
       </div>

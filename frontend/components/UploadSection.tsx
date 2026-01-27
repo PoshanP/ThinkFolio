@@ -8,7 +8,7 @@ import { useAlert } from "@/lib/contexts/AlertContext";
 import { useStats } from "@/lib/contexts/StatsContext";
 import { useData } from "@/lib/contexts/DataContext";
 import { useCollections, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
-import { NEXT_READ_COLLECTION_NAME } from "@/lib/constants";
+import { NEXT_READ_COLLECTION_NAME, STYLE_CLASSES } from "@/lib/constants";
 
 export function UploadSection() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -381,7 +381,7 @@ export function UploadSection() {
         ) : isProcessing ? (
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
             <div className="space-y-3">
-              <Loader2 className="h-10 w-10 text-indigo-600 dark:text-indigo-400 mx-auto animate-spin" />
+              <Loader2 className={`h-10 w-10 ${STYLE_CLASSES.spinnerColor} mx-auto animate-spin`} />
               <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {processingStatus || "Processing..."}
               </p>
@@ -393,9 +393,9 @@ export function UploadSection() {
         ) : selectedFile ? (
           /* File selected view */
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-indigo-300 dark:border-indigo-600 rounded-lg p-4 bg-indigo-50 dark:bg-indigo-900/20">
+            <div className={`${STYLE_CLASSES.fileSelectedBorder} p-4 ${STYLE_CLASSES.fileSelectedBg}`}>
               <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                <FileText className={`h-8 w-8 ${STYLE_CLASSES.fileIconColor} flex-shrink-0`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {selectedFile.name}
@@ -425,7 +425,7 @@ export function UploadSection() {
                 value={documentName}
                 onChange={(e) => setDocumentName(e.target.value)}
                 placeholder="Enter document name..."
-                className="w-full px-3 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
+                className={`w-full px-3 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 ${STYLE_CLASSES.inputFocusRing} min-h-[44px]`}
               />
             </div>
 
@@ -436,8 +436,8 @@ export function UploadSection() {
                 onClick={() => setOpenImmediately(true)}
                 className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                   openImmediately
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? STYLE_CLASSES.toggleActivePrimary
+                    : STYLE_CLASSES.toggleInactive
                 }`}
               >
                 Read Now
@@ -447,8 +447,8 @@ export function UploadSection() {
                 onClick={() => setOpenImmediately(false)}
                 className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                   !openImmediately
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? STYLE_CLASSES.toggleActiveAccent
+                    : STYLE_CLASSES.toggleInactive
                 }`}
               >
                 Next Read
@@ -460,8 +460,8 @@ export function UploadSection() {
               disabled={!documentName.trim()}
               className={`w-full text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed min-h-[48px] ${
                 openImmediately
-                  ? 'bg-indigo-600 hover:bg-indigo-700'
-                  : 'bg-amber-500 hover:bg-amber-600'
+                  ? STYLE_CLASSES.buttonPrimary
+                  : STYLE_CLASSES.buttonAccent
               }`}
             >
               {openImmediately ? 'Upload & Read' : 'Save to Next Read'}
@@ -475,7 +475,7 @@ export function UploadSection() {
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all"
+              className={`${STYLE_CLASSES.dropZone} p-6 text-center cursor-pointer`}
             >
               <input
                 ref={fileInputRef}
@@ -485,8 +485,8 @@ export function UploadSection() {
                 className="hidden"
               />
               <div className="space-y-2">
-                <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto">
-                  <Plus className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <div className={`w-10 h-10 ${STYLE_CLASSES.dropZoneIcon} rounded-full flex items-center justify-center mx-auto`}>
+                  <Plus className={`h-5 w-5 ${STYLE_CLASSES.dropZoneIconColor}`} />
                 </div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Drop PDF here or click to browse
@@ -516,7 +516,7 @@ export function UploadSection() {
                     ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
                     : isValidUrl
                       ? 'border-green-300 dark:border-green-600 focus:ring-green-500'
-                      : 'border-gray-300 dark:border-gray-600 focus:ring-indigo-500'
+                      : `border-gray-300 dark:border-gray-600 ${STYLE_CLASSES.inputFocusRing}`
                 }`}
               />
               {urlError && (
@@ -539,7 +539,7 @@ export function UploadSection() {
                     value={documentName}
                     onChange={(e) => setDocumentName(e.target.value)}
                     placeholder="Enter document name..."
-                    className="w-full px-3 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
+                    className={`w-full px-3 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 ${STYLE_CLASSES.inputFocusRing} min-h-[44px]`}
                   />
                 </div>
 
@@ -550,8 +550,8 @@ export function UploadSection() {
                     onClick={() => setOpenImmediately(true)}
                     className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                       openImmediately
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? STYLE_CLASSES.toggleActivePrimary
+                        : STYLE_CLASSES.toggleInactive
                     }`}
                   >
                     Read Now
@@ -561,8 +561,8 @@ export function UploadSection() {
                     onClick={() => setOpenImmediately(false)}
                     className={`flex-1 py-3 px-3 text-sm font-medium transition-colors min-h-[44px] ${
                       !openImmediately
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? STYLE_CLASSES.toggleActiveAccent
+                        : STYLE_CLASSES.toggleInactive
                     }`}
                   >
                     Next Read
@@ -574,8 +574,8 @@ export function UploadSection() {
                   disabled={!documentName.trim()}
                   className={`w-full text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed min-h-[48px] ${
                     openImmediately
-                      ? 'bg-indigo-600 hover:bg-indigo-700'
-                      : 'bg-amber-500 hover:bg-amber-600'
+                      ? STYLE_CLASSES.buttonPrimary
+                      : STYLE_CLASSES.buttonAccent
                   }`}
                 >
                   {openImmediately ? 'Upload & Read' : 'Save to Next Read'}

@@ -1,5 +1,7 @@
 "use client";
 
+import { STYLE_CLASSES } from "@/lib/constants";
+
 // Generate random stars
 function generateStars(count: number) {
   const stars = [];
@@ -24,7 +26,7 @@ export function StarryBackground() {
       {stars.map((star) => (
         <div
           key={star.id}
-          className="absolute rounded-full bg-indigo-400 dark:bg-white animate-twinkle"
+          className={`absolute rounded-full ${STYLE_CLASSES.starColor} animate-twinkle`}
           style={{
             left: `${star.left}%`,
             top: `${star.top}%`,

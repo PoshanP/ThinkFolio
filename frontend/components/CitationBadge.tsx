@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FileText } from "lucide-react";
+import { STYLE_CLASSES } from "@/lib/constants";
 
 interface CitationBadgeProps {
   page: number;
@@ -16,7 +17,7 @@ export function CitationBadge({ page, text }: CitationBadgeProps) {
       <button
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded text-xs font-medium hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors"
+        className={`inline-flex items-center gap-1 px-2 py-1 ${STYLE_CLASSES.badgeCitation} rounded text-xs font-medium transition-colors`}
       >
         <FileText className="h-3 w-3" />
         <span>p.{page}</span>

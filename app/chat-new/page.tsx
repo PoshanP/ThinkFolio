@@ -22,6 +22,7 @@ import { useConfirm } from "@/lib/contexts/ConfirmContext";
 import { useBreakpoint } from "@/lib/hooks/useMediaQuery";
 import { MobileChatLayout } from "@/frontend/components/chat/MobileChatLayout";
 import { PdfViewer } from "@/frontend/components/PdfViewer";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 interface ChatSession {
   id: string;
@@ -905,7 +906,7 @@ function ChatNewPageContent() {
                         {message.role === 'user' ? (
                           <div className="flex justify-end">
                             <div className="max-w-[320px]">
-                              <div className="bg-indigo-600 text-white rounded-xl px-3 py-2 shadow-md">
+                              <div className={`${STYLE_CLASSES.buttonPrimary} text-white rounded-xl px-3 py-2 shadow-md`}>
                                 <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
                               </div>
                             </div>

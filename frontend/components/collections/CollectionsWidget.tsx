@@ -6,6 +6,7 @@ import { CollectionIcon } from "./CollectionIcon";
 import { CreateCollectionModal } from "./CreateCollectionModal";
 import { useCollections } from "@/lib/hooks/useCollections";
 import Link from "next/link";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 export function CollectionsWidget() {
   const { data: collections, isLoading, refresh } = useCollections();
@@ -30,7 +31,7 @@ export function CollectionsWidget() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className={`p-1.5 text-gray-500 dark:text-gray-400 ${STYLE_CLASSES.hoverTextPrimary} hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors`}
               title="Create collection"
             >
               <Plus className="h-4 w-4" />
@@ -76,7 +77,7 @@ export function CollectionsWidget() {
             {(collections?.length || 0) > 5 && (
               <Link
                 href="/papers"
-                className="block text-center text-xs text-indigo-600 dark:text-indigo-400 hover:underline pt-2"
+                className={`block text-center text-xs ${STYLE_CLASSES.textThemePrimary} hover:underline pt-2`}
               >
                 View all {collections?.length} collections
               </Link>
@@ -89,7 +90,7 @@ export function CollectionsWidget() {
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+              className={`text-sm ${STYLE_CLASSES.textThemePrimary} hover:underline`}
             >
               Create your first collection
             </button>

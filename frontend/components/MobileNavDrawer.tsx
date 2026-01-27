@@ -141,7 +141,7 @@ export function MobileNavDrawer({
                       href={item.href}
                       className={`flex items-center space-x-3 px-4 py-3 rounded-lg min-h-[48px] transition-colors ${
                         isActive
-                          ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                          ? STYLE_CLASSES.activeNavItem
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
                     >
