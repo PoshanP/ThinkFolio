@@ -121,14 +121,26 @@ export default function AuthPage() {
   const { auth } = BRAND_COPY;
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-4 py-8 relative">
+    <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-sky-400/30 via-cyan-400/20 to-transparent dark:from-sky-600/20 dark:via-cyan-600/10 rounded-full blur-3xl animate-float-slow" />
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-gradient-to-tr from-emerald-400/25 via-teal-400/15 to-transparent dark:from-emerald-600/15 dark:via-teal-600/10 rounded-full blur-3xl animate-float-slow-reverse" />
+        <div className="absolute top-1/2 -right-20 w-64 h-64 bg-gradient-to-l from-sky-300/20 via-emerald-400/10 to-transparent dark:from-sky-500/15 dark:via-emerald-500/10 rounded-full blur-3xl animate-pulse-subtle" />
+        <div className="absolute top-32 left-20 w-32 h-32 bg-gradient-to-br from-amber-300/20 to-yellow-400/10 dark:from-amber-400/15 dark:to-yellow-500/10 rounded-full blur-2xl animate-float" />
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.04]" />
+        <div className="absolute inset-0 bg-noise opacity-[0.015] dark:opacity-[0.03] mix-blend-overlay" />
+        <div className="absolute inset-0 bg-radial-vignette" />
+      </div>
+
       {/* Back Button - Top Left */}
       <Link
         href={ROUTES.home}
-        className={`absolute top-4 left-4 p-2 rounded-lg ${STYLE_CLASSES.textSecondary} hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
+        className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg border border-sky-200 dark:border-sky-700 bg-transparent text-sky-600 dark:text-sky-400 text-sm font-medium hover:border-sky-400 dark:hover:border-sky-500 hover:bg-sky-50/50 dark:hover:bg-sky-900/20 transition-all duration-200"
         aria-label="Back to home"
       >
-        <ArrowLeft className={ICON_SIZES.sm} />
+        <ArrowLeft className="h-4 w-4" />
+        <span>Back</span>
       </Link>
 
       {/* Compact Branding */}
@@ -160,26 +172,26 @@ export default function AuthPage() {
               onClick={() => setActiveTab("signin")}
               className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
                 activeTab === "signin"
-                  ? "text-indigo-600 dark:text-indigo-400"
+                  ? "text-sky-600 dark:text-sky-400"
                   : `${STYLE_CLASSES.textSecondary} hover:text-gray-700 dark:hover:text-gray-300`
               }`}
             >
               {auth.signIn.tab}
               {activeTab === "signin" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-600 dark:bg-sky-400" />
               )}
             </button>
             <button
               onClick={() => setActiveTab("signup")}
               className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
                 activeTab === "signup"
-                  ? "text-indigo-600 dark:text-indigo-400"
+                  ? "text-sky-600 dark:text-sky-400"
                   : `${STYLE_CLASSES.textSecondary} hover:text-gray-700 dark:hover:text-gray-300`
               }`}
             >
               {auth.signUp.tab}
               {activeTab === "signup" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-600 dark:bg-sky-400" />
               )}
             </button>
           </div>
@@ -257,7 +269,7 @@ export default function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("signup")}
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                    className="text-sky-600 dark:text-sky-400 hover:underline font-medium"
                   >
                     {auth.signIn.createLink}
                   </button>
@@ -363,7 +375,7 @@ export default function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("signin")}
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                    className="text-sky-600 dark:text-sky-400 hover:underline font-medium"
                   >
                     {auth.signUp.signInLink}
                   </button>
