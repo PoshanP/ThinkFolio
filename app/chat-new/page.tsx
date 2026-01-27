@@ -21,7 +21,7 @@ import { useStats } from "@/lib/contexts/StatsContext";
 import { useConfirm } from "@/lib/contexts/ConfirmContext";
 import { useBreakpoint } from "@/lib/hooks/useMediaQuery";
 import { MobileChatLayout } from "@/frontend/components/chat/MobileChatLayout";
-import { PdfViewer } from "@/frontend/components/PdfViewer";
+import { DocumentViewer, FileType } from "@/frontend/components/viewers/DocumentViewer";
 import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 interface ChatSession {
@@ -70,6 +70,9 @@ function ChatNewPageContent() {
   const [pdfBaseUrl, setPdfBaseUrl] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<FileType>('pdf');
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const pdfLoadedRef = useRef<boolean>(false);
   const resizeRef = useRef<HTMLDivElement>(null);
@@ -465,16 +468,43 @@ function ChatNewPageContent() {
       setPreviewLoading(true);
 
       try {
-        // First check processing status
+        // First check processing status and file type
         const { data: paper, error } = await supabase
           .from('papers')
-          .select('storage_path, processing_status, processing_error')
+          .select('storage_path, processing_status, processing_error, file_type, preview_html, preview_image_path')
           .eq('id', paperId)
           .single();
 
         if (error) {
           console.error('Paper fetch error:', error);
           return;
+        }
+
+        // Debug: log paper data from database
+        console.log('Paper data from DB:', {
+          file_type: paper?.file_type,
+          preview_html: paper?.preview_html?.slice(0, 100),
+          preview_image_path: paper?.preview_image_path,
+          storage_path: paper?.storage_path
+        });
+
+        // Set file type (default to 'pdf' for backwards compatibility)
+        const detectedFileType = (paper?.file_type as FileType) || 'pdf';
+        setFileType(detectedFileType);
+
+        // Set preview HTML if available
+        if (paper?.preview_html) {
+          setPreviewHtml(paper.preview_html);
+        }
+
+        // Get preview image URL if available
+        if (paper?.preview_image_path) {
+          const { data: previewSigned } = await supabase.storage
+            .from('papers')
+            .createSignedUrl(paper.preview_image_path, 60 * 60);
+          if (previewSigned?.signedUrl) {
+            setPreviewImageUrl(previewSigned.signedUrl);
+          }
         }
 
         // Check if paper has chunks (means it's been processed regardless of status)
@@ -495,7 +525,7 @@ function ChatNewPageContent() {
             const [{ data: updatedPaper }, { count: updatedChunkCount }] = await Promise.all([
               supabase
                 .from('papers')
-                .select('processing_status, processing_error, storage_path')
+                .select('processing_status, processing_error, storage_path, file_type, preview_html, preview_image_path')
                 .eq('id', paperId)
                 .single(),
               supabase
@@ -510,16 +540,33 @@ function ChatNewPageContent() {
             if (updatedPaper) {
               setProcessingStatus(effectiveStatus);
 
+              // Update file type and preview info
+              if (updatedPaper.file_type) {
+                setFileType(updatedPaper.file_type as FileType);
+              }
+              if (updatedPaper.preview_html) {
+                setPreviewHtml(updatedPaper.preview_html);
+              }
+
               if (effectiveStatus === 'completed') {
                 clearInterval(pollInterval);
                 setProcessingError(null);
-                // Load PDF after processing complete
+                // Load document after processing complete
                 if (updatedPaper.storage_path) {
                   const { data: signed } = await supabase.storage
                     .from('papers')
                     .createSignedUrl(updatedPaper.storage_path, 60 * 60);
                   if (signed?.signedUrl) {
                     setPdfBaseUrl(signed.signedUrl);
+                  }
+                }
+                // Get preview image URL if available
+                if (updatedPaper.preview_image_path) {
+                  const { data: previewSigned } = await supabase.storage
+                    .from('papers')
+                    .createSignedUrl(updatedPaper.preview_image_path, 60 * 60);
+                  if (previewSigned?.signedUrl) {
+                    setPreviewImageUrl(previewSigned.signedUrl);
                   }
                 }
                 setPreviewLoading(false);
@@ -724,6 +771,9 @@ function ChatNewPageContent() {
           processingStatus={processingStatus}
           processingError={processingError}
           onBack={() => router.back()}
+          fileType={fileType}
+          previewHtml={previewHtml}
+          previewImageUrl={previewImageUrl}
         />
       </div>
     );
@@ -974,14 +1024,17 @@ function ChatNewPageContent() {
                 />
               )}
 
-              {/* PDF viewer */}
+              {/* Document viewer */}
               <div className="flex-1 overflow-hidden">
-                <PdfViewer
-                  pdfUrl={pdfBaseUrl}
+                <DocumentViewer
+                  fileType={fileType}
+                  fileUrl={pdfBaseUrl}
+                  previewHtml={previewHtml}
+                  previewImageUrl={previewImageUrl}
                   isLoading={previewLoading}
                   processingStatus={processingStatus}
                   processingError={processingError}
-                  onChatOpen={!chatOpen ? () => { setChatOpen(true); setChatEverOpened(true); } : undefined}
+                  onChatClick={!chatOpen ? () => { setChatOpen(true); setChatEverOpened(true); } : undefined}
                   messageCount={messages.filter(m => !m.metadata?.is_loading && !m.metadata?.is_system_summary).length}
                 />
               </div>

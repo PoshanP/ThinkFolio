@@ -10,8 +10,28 @@ import { BRAND } from './branding'
 export const APP_NAME = BRAND.name
 export const APP_DESCRIPTION = BRAND.metaDescription
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-export const ALLOWED_FILE_TYPES = ['application/pdf']
+export const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB (default)
+
+// Supported document MIME types
+export const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+  'text/plain', // txt
+  'application/rtf', // rtf
+  'text/rtf', // rtf alternative
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
+  'text/csv', // csv
+  'application/csv', // csv alternative
+  'application/epub+zip', // epub
+  'text/html', // html
+  'application/xhtml+xml', // xhtml
+]
+
+// Supported file extensions
+export const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt', '.rtf', '.pptx', '.csv', '.epub', '.html', '.htm']
+
+// File type identifiers
+export type FileType = 'pdf' | 'docx' | 'txt' | 'rtf' | 'pptx' | 'csv' | 'epub' | 'html'
 
 // Supported document formats for display
 export const SUPPORTED_FORMATS = [

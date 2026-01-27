@@ -8,13 +8,21 @@ import { DatabaseService } from '@/lib/db'
 import { validateFileName, InputSanitizer } from '@/lib/validation'
 import { createRequestLogger } from '@/lib/logger'
 import { z } from 'zod'
+import { parseDocument, generatePreview } from '@/lib/services/document.service'
+import {
+  getFileTypeFromMime,
+  getFileTypeFromExtension,
+  isSupportedMimeType,
+  FileType,
+  getMaxFileSize,
+} from '@/lib/utils/mimeTypes'
 
 const logger = createRequestLogger('PaperUpload')
 
 const uploadSchema = z.object({
   title: z.string().min(1).max(255).transform(s => InputSanitizer.sanitizeString(s, 255)),
   source: z.enum(['upload', 'url']),
-  url: z.string().url().optional().transform(u => u ? InputSanitizer.sanitizeUrl(u) : undefined),
+  url: z.string().url().optional().nullable().transform(u => u ? InputSanitizer.sanitizeUrl(u) : undefined),
 })
 
 export async function POST(request: NextRequest) {
@@ -42,37 +50,96 @@ export async function POST(request: NextRequest) {
 
     let storagePath: string | null = null
     let pageCount = 0
-    let pdfMetadata: any = null
-    let chunks: any[] = []
+    let fileType: FileType = 'pdf'
+    let previewHtml: string | null = null
+    let previewImagePath: string | null = null
+    let chunks: Array<{ content: string; pageNo: number }> = []
 
     if (validatedData.source === 'upload' && file) {
-      // Validate file
+      // Validate file name
       if (!validateFileName(file.name)) {
         logger.warn({ fileName: file.name }, 'Invalid file name')
         return errorResponse('Invalid file name', 400)
       }
 
-      if (file.type !== 'application/pdf') {
-        return errorResponse('Only PDF files are allowed', 400)
+      // Determine file type from MIME type or extension
+      const detectedFileType = getFileTypeFromMime(file.type) || getFileTypeFromExtension(file.name)
+
+      if (!detectedFileType) {
+        return errorResponse(
+          `Unsupported file type. Supported formats: PDF, DOCX, TXT, RTF, PPTX, CSV, EPUB, HTML`,
+          400
+        )
       }
+
+      fileType = detectedFileType
 
       // Convert to buffer
       const buffer = Buffer.from(await file.arrayBuffer())
 
-      // Validate and sanitize PDF
-      StorageService.validateFile(buffer, file.type)
-      const sanitizedBuffer = await PDFService.sanitizePDF(buffer)
+      // Check file size against type-specific limits
+      const maxSize = getMaxFileSize(fileType)
+      if (buffer.length > maxSize) {
+        return errorResponse(
+          `File size exceeds ${Math.round(maxSize / (1024 * 1024))}MB limit for ${fileType.toUpperCase()} files`,
+          400
+        )
+      }
 
-      // Extract PDF metadata and chunks
-      pdfMetadata = await PDFService.extractMetadata(sanitizedBuffer)
-      pageCount = pdfMetadata.pageCount
-      chunks = pdfMetadata.chunks
+      logger.info({
+        userId: user.id,
+        fileName: file.name,
+        fileType,
+        fileSize: buffer.length,
+      }, 'Processing file')
 
-      // Upload to storage
-      const { path } = await StorageService.uploadFile(sanitizedBuffer, {
+      // Handle PDF files with special sanitization
+      let processBuffer: Buffer = buffer
+      if (fileType === 'pdf') {
+        // Validate and sanitize PDF
+        StorageService.validateFile(buffer, file.type)
+        processBuffer = await PDFService.sanitizePDF(buffer) as Buffer
+      }
+
+      // Parse document to extract text and chunks
+      const parsedDoc = await parseDocument(processBuffer, file.type, file.name)
+      pageCount = parsedDoc.pageCount
+      previewHtml = parsedDoc.previewHtml || null
+
+      // Create chunks from parsed document
+      if (parsedDoc.chunks && parsedDoc.chunks.length > 0) {
+        chunks = parsedDoc.chunks.map(chunk => ({
+          content: chunk.content,
+          pageNo: chunk.pageNo,
+        }))
+      } else {
+        // Fallback: create basic chunks if parser didn't provide them
+        chunks = PDFService.createChunks(parsedDoc.text, pageCount).map(chunk => ({
+          content: chunk.content,
+          pageNo: chunk.pageNumber,
+        }))
+      }
+
+      // Generate preview image for PPTX
+      if (fileType === 'pptx') {
+        const preview = await generatePreview(processBuffer, fileType, file.name)
+        if (preview.previewImageBuffer) {
+          // Upload preview image to storage
+          const { path: imagePath } = await StorageService.uploadFile(preview.previewImageBuffer, {
+            bucket: 'papers',
+            path: `${user.id}/previews`,
+            contentType: 'image/png'
+          })
+          previewImagePath = imagePath
+        }
+      }
+
+      // Upload original file to storage
+      const contentType = file.type || 'application/octet-stream'
+      const { path } = await StorageService.uploadFile(processBuffer, {
         bucket: 'papers',
         path: user.id,
-        contentType: 'application/pdf'
+        contentType
       })
 
       storagePath = path
@@ -80,14 +147,16 @@ export async function POST(request: NextRequest) {
       logger.info({
         userId: user.id,
         fileName: file.name,
+        fileType,
         pageCount,
         chunksCreated: chunks.length,
-        storagePath
-      }, 'PDF processed and uploaded')
+        storagePath,
+        hasPreviewHtml: !!previewHtml,
+        hasPreviewImage: !!previewImagePath,
+      }, 'Document processed and uploaded')
 
     } else if (validatedData.source === 'url' && validatedData.url) {
       // For URL-based papers, we'll fetch and process later
-      // This is a placeholder for future implementation
       logger.info({ url: validatedData.url }, 'URL-based paper upload requested')
       pageCount = 1
     } else {
@@ -105,6 +174,9 @@ export async function POST(request: NextRequest) {
           source: validatedData.source,
           storage_path: storagePath,
           page_count: pageCount,
+          file_type: fileType,
+          preview_html: previewHtml,
+          preview_image_path: previewImagePath,
         } as any)
         .select()
         .single()
@@ -114,6 +186,9 @@ export async function POST(request: NextRequest) {
         if (storagePath) {
           await StorageService.deleteFile('papers', storagePath)
         }
+        if (previewImagePath) {
+          await StorageService.deleteFile('papers', previewImagePath)
+        }
         throw dbError
       }
 
@@ -121,9 +196,9 @@ export async function POST(request: NextRequest) {
       if (chunks.length > 0) {
         const chunkRecords = chunks.map(chunk => ({
           paper_id: (paper as any).id,
-          page_no: chunk.pageNumber,
+          page_no: chunk.pageNo,
           content: chunk.content,
-          // Embeddings will be generated when RAG is implemented
+          // Embeddings will be generated when RAG processing runs
           embedding: null
         }))
 
@@ -147,6 +222,7 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime
     logger.info({
       paperId: (result as any).id,
+      fileType,
       duration,
       success: true
     }, 'Paper upload completed')

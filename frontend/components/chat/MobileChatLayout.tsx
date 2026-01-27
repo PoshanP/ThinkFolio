@@ -30,6 +30,8 @@ interface ChatSession {
   };
 }
 
+export type FileType = 'pdf' | 'docx' | 'txt' | 'rtf' | 'pptx' | 'csv' | 'epub' | 'html';
+
 interface MobileChatLayoutProps {
   sessions: ChatSession[];
   currentSession: ChatSession | null;
@@ -50,6 +52,10 @@ interface MobileChatLayoutProps {
   processingStatus: "pending" | "processing" | "completed" | "failed" | null;
   processingError: string | null;
   onBack: () => void;
+  // Document type props
+  fileType?: FileType;
+  previewHtml?: string | null;
+  previewImageUrl?: string | null;
 }
 
 export function MobileChatLayout({
@@ -72,6 +78,9 @@ export function MobileChatLayout({
   processingStatus,
   processingError,
   onBack,
+  fileType = 'pdf',
+  previewHtml,
+  previewImageUrl,
 }: MobileChatLayoutProps) {
   const [chatOpen, setChatOpen] = useState(false);
   const [sessionSelectorOpen, setSessionSelectorOpen] = useState(false);
@@ -134,7 +143,7 @@ export function MobileChatLayout({
 
   return (
     <div className="relative flex flex-col h-full">
-      {/* PDF View - Full Screen (Default) */}
+      {/* Document View - Full Screen (Default) */}
       <MobilePdfView
         pdfUrl={pdfUrl}
         isLoading={pdfLoading}
@@ -143,6 +152,9 @@ export function MobileChatLayout({
         onBack={onBack}
         onChatOpen={toggleChat}
         messageCount={actualMessageCount}
+        fileType={fileType}
+        previewHtml={previewHtml}
+        previewImageUrl={previewImageUrl}
       />
 
       {/* Chat Panel - Slide up overlay */}

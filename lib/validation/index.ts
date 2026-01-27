@@ -50,6 +50,34 @@ export const fileValidation = {
     type: z.literal('application/pdf'),
     size: z.number().max(50 * 1024 * 1024, 'File size must be less than 50MB'),
   }),
+  docx: z.object({
+    type: z.literal('application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+    size: z.number().max(50 * 1024 * 1024, 'File size must be less than 50MB'),
+  }),
+  txt: z.object({
+    type: z.literal('text/plain'),
+    size: z.number().max(10 * 1024 * 1024, 'File size must be less than 10MB'),
+  }),
+  rtf: z.object({
+    type: z.union([z.literal('application/rtf'), z.literal('text/rtf')]),
+    size: z.number().max(20 * 1024 * 1024, 'File size must be less than 20MB'),
+  }),
+  pptx: z.object({
+    type: z.literal('application/vnd.openxmlformats-officedocument.presentationml.presentation'),
+    size: z.number().max(100 * 1024 * 1024, 'File size must be less than 100MB'),
+  }),
+  csv: z.object({
+    type: z.union([z.literal('text/csv'), z.literal('application/csv')]),
+    size: z.number().max(50 * 1024 * 1024, 'File size must be less than 50MB'),
+  }),
+  epub: z.object({
+    type: z.literal('application/epub+zip'),
+    size: z.number().max(50 * 1024 * 1024, 'File size must be less than 50MB'),
+  }),
+  html: z.object({
+    type: z.union([z.literal('text/html'), z.literal('application/xhtml+xml')]),
+    size: z.number().max(10 * 1024 * 1024, 'File size must be less than 10MB'),
+  }),
   image: z.object({
     type: z.enum(['image/jpeg', 'image/png', 'image/webp']),
     size: z.number().max(10 * 1024 * 1024, 'Image size must be less than 10MB'),
@@ -98,14 +126,16 @@ export function validateFileName(fileName: string): boolean {
     return false
   }
 
-  // Check for valid characters
-  const validPattern = /^[a-zA-Z0-9_\-\.]+$/
-  if (!validPattern.test(fileName)) {
+  // Check for dangerous characters (null bytes, control characters)
+  if (/[\x00-\x1f\x7f]/.test(fileName)) {
     return false
   }
 
-  // Check file extension
-  const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.webp']
+  // Check file extension - support all document formats plus images
+  const allowedExtensions = [
+    '.pdf', '.docx', '.txt', '.rtf', '.pptx', '.csv', '.epub', '.html', '.htm',
+    '.jpg', '.jpeg', '.png', '.webp'
+  ]
   const hasValidExtension = allowedExtensions.some(ext => fileName.toLowerCase().endsWith(ext))
 
   return hasValidExtension

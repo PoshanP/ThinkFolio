@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { FileText, X, Loader2, Plus, AlertCircle, AlertTriangle } from "lucide-react";
+import { FileText, X, Loader2, Plus, AlertCircle, AlertTriangle, File, Table, Book, Code, Presentation } from "lucide-react";
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import { useAlert } from "@/lib/contexts/AlertContext";
@@ -9,6 +9,67 @@ import { useStats } from "@/lib/contexts/StatsContext";
 import { useData } from "@/lib/contexts/DataContext";
 import { useCollections, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
 import { NEXT_READ_COLLECTION_NAME, STYLE_CLASSES } from "@/lib/constants";
+
+// Supported file types and their configurations
+const SUPPORTED_FORMATS = {
+  'application/pdf': { ext: '.pdf', label: 'PDF', icon: FileText, maxSize: 50 },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { ext: '.docx', label: 'Word', icon: FileText, maxSize: 50 },
+  'text/plain': { ext: '.txt', label: 'Text', icon: File, maxSize: 10 },
+  'application/rtf': { ext: '.rtf', label: 'RTF', icon: FileText, maxSize: 20 },
+  'text/rtf': { ext: '.rtf', label: 'RTF', icon: FileText, maxSize: 20 },
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': { ext: '.pptx', label: 'PowerPoint', icon: Presentation, maxSize: 100 },
+  'text/csv': { ext: '.csv', label: 'CSV', icon: Table, maxSize: 50 },
+  'application/csv': { ext: '.csv', label: 'CSV', icon: Table, maxSize: 50 },
+  'application/epub+zip': { ext: '.epub', label: 'EPUB', icon: Book, maxSize: 50 },
+  'text/html': { ext: '.html', label: 'HTML', icon: Code, maxSize: 10 },
+  'application/xhtml+xml': { ext: '.html', label: 'HTML', icon: Code, maxSize: 10 },
+} as const;
+
+const ACCEPTED_EXTENSIONS = '.pdf,.docx,.txt,.rtf,.pptx,.csv,.epub,.html,.htm';
+const ACCEPTED_MIME_TYPES = Object.keys(SUPPORTED_FORMATS);
+
+// Map MIME types to file_type values for database
+const MIME_TO_FILE_TYPE: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'text/plain': 'txt',
+  'application/rtf': 'rtf',
+  'text/rtf': 'rtf',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'text/csv': 'csv',
+  'application/csv': 'csv',
+  'application/epub+zip': 'epub',
+  'text/html': 'html',
+  'application/xhtml+xml': 'html',
+};
+
+function getFileInfo(file: File) {
+  const format = SUPPORTED_FORMATS[file.type as keyof typeof SUPPORTED_FORMATS];
+  if (format) return format;
+
+  // Fallback: check by extension
+  const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
+  const byExt = Object.values(SUPPORTED_FORMATS).find(f => f.ext === ext);
+  return byExt || { ext: ext || '', label: 'Document', icon: File, maxSize: 50 };
+}
+
+function getFileType(file: File): string {
+  if (MIME_TO_FILE_TYPE[file.type]) return MIME_TO_FILE_TYPE[file.type];
+
+  // Fallback: check by extension
+  const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
+  const extToType: Record<string, string> = {
+    '.pdf': 'pdf', '.docx': 'docx', '.txt': 'txt', '.rtf': 'rtf',
+    '.pptx': 'pptx', '.csv': 'csv', '.epub': 'epub', '.html': 'html', '.htm': 'html'
+  };
+  return ext ? extToType[ext] || 'pdf' : 'pdf';
+}
+
+function isSupported(file: File): boolean {
+  if (ACCEPTED_MIME_TYPES.includes(file.type)) return true;
+  const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
+  return ext ? ACCEPTED_EXTENSIONS.includes(ext) : false;
+}
 
 export function UploadSection() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -47,16 +108,17 @@ export function UploadSection() {
 
     try {
       const url = new URL(pdfUrl);
-      // Check if URL ends with .pdf or contains pdf in path
-      const isPdfUrl = pdfUrl.toLowerCase().endsWith('.pdf') ||
-                       url.pathname.toLowerCase().includes('.pdf') ||
-                       url.pathname.toLowerCase().includes('/pdf');
+      // Check for supported file extensions in URL
+      const supportedExtensions = ['.pdf', '.docx', '.txt', '.rtf', '.pptx', '.csv', '.epub', '.html', '.htm'];
+      const hasValidExtension = supportedExtensions.some(ext =>
+        pdfUrl.toLowerCase().endsWith(ext) || url.pathname.toLowerCase().includes(ext)
+      );
 
-      if (isPdfUrl) {
+      if (hasValidExtension) {
         setUrlError("");
         setIsValidUrl(true);
       } else {
-        setUrlError("URL should point to a PDF file");
+        setUrlError("URL should point to a supported document (PDF, DOCX, TXT, etc.)");
         setIsValidUrl(false);
       }
     } catch {
@@ -67,25 +129,34 @@ export function UploadSection() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === "application/pdf") {
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        showWarning("File size exceeds 5MB limit. Please select a smaller PDF file.");
-        return;
-      }
-      setSelectedFile(file);
-      const nameWithoutExtension = file.name.replace('.pdf', '');
-      setDocumentName(nameWithoutExtension);
-      // Clear URL when file is selected
-      setPdfUrl("");
-      setUrlError("");
-      setIsValidUrl(false);
+    if (!file) return;
+
+    if (!isSupported(file)) {
+      showWarning("Unsupported file type. Please upload PDF, DOCX, TXT, RTF, PPTX, CSV, EPUB, or HTML files.");
+      return;
     }
+
+    const fileInfo = getFileInfo(file);
+    const maxSize = fileInfo.maxSize * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      showWarning(`File size exceeds ${fileInfo.maxSize}MB limit for ${fileInfo.label} files.`);
+      return;
+    }
+
+    setSelectedFile(file);
+    // Remove extension from filename for display
+    const nameWithoutExtension = file.name.replace(/\.[^.]+$/, '');
+    setDocumentName(nameWithoutExtension);
+    // Clear URL when file is selected
+    setPdfUrl("");
+    setUrlError("");
+    setIsValidUrl(false);
   };
 
   const handleSubmit = async (file?: File) => {
     setIsProcessing(true);
-    setProcessingStatus("Uploading PDF...");
+    setProcessingStatus("Uploading document...");
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -96,26 +167,31 @@ export function UploadSection() {
 
       let fileToProcess: File;
       let paperTitle: string;
-      let source: string;
 
       if (file || selectedFile) {
         fileToProcess = (file || selectedFile)!;
-        paperTitle = documentName || fileToProcess.name.replace('.pdf', '');
-        source = 'file upload';
+        paperTitle = documentName || fileToProcess.name.replace(/\.[^.]+$/, '');
       } else {
         throw new Error('No file provided');
       }
 
+      const fileInfo = getFileInfo(fileToProcess);
+      const fileType = getFileType(fileToProcess);
       const estimatedPageCount = await getPageCount(fileToProcess);
 
-      // Create paper record with pending status
+      // Get file extension
+      const ext = fileToProcess.name.toLowerCase().match(/\.[^.]+$/)?.[0] || '.pdf';
+
+      // Step 1: Create paper record with pending status FIRST
+      setProcessingStatus("Creating record...");
       const { data: paper, error: paperError } = await supabase
         .from('papers')
         .insert({
           user_id: user.id,
           title: paperTitle,
-          source: source,
+          source: 'upload',
           page_count: estimatedPageCount,
+          file_type: fileType,
           processing_status: 'pending',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -125,7 +201,42 @@ export function UploadSection() {
 
       if (paperError) throw paperError;
 
-      // Add to Next Read collection if not opening immediately
+      // Step 2: Upload file to Supabase Storage directly (client-side)
+      setProcessingStatus(`Uploading ${fileInfo.label}...`);
+      const storagePath = `${user.id}/${paper.id}${ext}`;
+
+      // Convert file to Blob with application/octet-stream to bypass MIME restrictions
+      const fileBuffer = await fileToProcess.arrayBuffer();
+      const uploadBlob = new Blob([fileBuffer], { type: 'application/octet-stream' });
+
+      const { error: uploadError } = await supabase.storage
+        .from('papers')
+        .upload(storagePath, uploadBlob, {
+          cacheControl: '3600',
+          contentType: 'application/octet-stream',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        // Update paper status to failed
+        await supabase
+          .from('papers')
+          .update({
+            processing_status: 'failed',
+            processing_error: uploadError.message
+          })
+          .eq('id', paper.id);
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Step 3: Update paper with storage path
+      await supabase
+        .from('papers')
+        .update({ storage_path: storagePath })
+        .eq('id', paper.id);
+
+      // Step 4: Add to Next Read collection if not opening immediately
       if (!openImmediately && nextReadCollection) {
         try {
           await fetch(`/api/collections/${nextReadCollection.id}/papers`, {
@@ -141,29 +252,8 @@ export function UploadSection() {
         }
       }
 
-      // Upload file to storage
-      setProcessingStatus("Saving file...");
-      try {
-        const storagePath = `${user.id}/${paper.id}.pdf`;
-        const { error: uploadError } = await supabase.storage
-          .from('papers')
-          .upload(storagePath, fileToProcess, {
-            cacheControl: '3600',
-            contentType: 'application/pdf',
-            upsert: true,
-          });
-
-        if (!uploadError) {
-          await supabase
-            .from('papers')
-            .update({ storage_path: storagePath })
-            .eq('id', paper.id);
-        }
-      } catch (storageErr) {
-        console.warn('Storage upload error:', storageErr);
-      }
-
-      // Start background processing (fire and forget)
+      // Step 5: Trigger background processing (fire and forget)
+      setProcessingStatus("Starting processing...");
       const formData = new FormData();
       formData.append('file', fileToProcess);
       formData.append('paper_id', paper.id);
@@ -179,7 +269,7 @@ export function UploadSection() {
       refreshPapers();
 
       if (!openImmediately) {
-        showSuccess(`"${paperTitle}" saved to Next Read`);
+        showSuccess(`"${paperTitle}" uploaded and saved to Next Read`);
         resetForm();
         return;
       }
@@ -229,19 +319,27 @@ export function UploadSection() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type === "application/pdf") {
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        showWarning("File size exceeds 5MB limit.");
-        return;
-      }
-      setSelectedFile(file);
-      const nameWithoutExtension = file.name.replace('.pdf', '');
-      setDocumentName(nameWithoutExtension);
-      setPdfUrl("");
-      setUrlError("");
-      setIsValidUrl(false);
+    if (!file) return;
+
+    if (!isSupported(file)) {
+      showWarning("Unsupported file type. Please upload PDF, DOCX, TXT, RTF, PPTX, CSV, EPUB, or HTML files.");
+      return;
     }
+
+    const fileInfo = getFileInfo(file);
+    const maxSize = fileInfo.maxSize * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      showWarning(`File size exceeds ${fileInfo.maxSize}MB limit for ${fileInfo.label} files.`);
+      return;
+    }
+
+    setSelectedFile(file);
+    const nameWithoutExtension = file.name.replace(/\.[^.]+$/, '');
+    setDocumentName(nameWithoutExtension);
+    setPdfUrl("");
+    setUrlError("");
+    setIsValidUrl(false);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -252,7 +350,7 @@ export function UploadSection() {
     if (!pdfUrl || !documentName.trim() || !isValidUrl) return;
 
     setIsProcessing(true);
-    setProcessingStatus("Saving paper...");
+    setProcessingStatus("Saving document...");
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -359,6 +457,10 @@ export function UploadSection() {
   const hasValidInput = selectedFile || isValidUrl;
   const canSubmit = hasValidInput && documentName.trim();
 
+  // Get file icon component
+  const FileIcon = selectedFile ? getFileInfo(selectedFile).icon : FileText;
+  const fileLabel = selectedFile ? getFileInfo(selectedFile).label : 'Document';
+
   return (
     <div>
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
@@ -401,7 +503,7 @@ export function UploadSection() {
                     {selectedFile.name}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    {fileLabel} • {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
                 <button
@@ -480,7 +582,7 @@ export function UploadSection() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf"
+                accept={ACCEPTED_EXTENSIONS}
                 onChange={handleFileSelect}
                 className="hidden"
               />
@@ -489,10 +591,10 @@ export function UploadSection() {
                   <Plus className={`h-5 w-5 ${STYLE_CLASSES.dropZoneIconColor}`} />
                 </div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Drop PDF here or click to browse
+                  Drop file here or click to browse
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Max 5MB
+                  PDF, DOCX, TXT, RTF, PPTX, CSV, EPUB, HTML
                 </p>
               </div>
             </div>

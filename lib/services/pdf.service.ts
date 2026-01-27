@@ -66,7 +66,7 @@ export class PDFService {
     }
   }
 
-  private static createChunks(text: string, pageCount: number): PDFChunk[] {
+  static createChunks(text: string, pageCount: number): PDFChunk[] {
     const chunks: PDFChunk[] = []
     const lines = text.split('\n')
     let currentChunk = ''

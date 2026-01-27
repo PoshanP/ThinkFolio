@@ -44,6 +44,8 @@ export interface PaginationParams {
   limit?: number
 }
 
+export type FileType = 'pdf' | 'docx' | 'txt' | 'rtf' | 'pptx' | 'csv' | 'epub' | 'html'
+
 export interface Paper {
   id: string
   userId: string
@@ -51,6 +53,9 @@ export interface Paper {
   source: string
   storagePath?: string
   pageCount: number
+  fileType: FileType
+  previewHtml?: string
+  previewImagePath?: string
   createdAt: string
   updatedAt: string
 }

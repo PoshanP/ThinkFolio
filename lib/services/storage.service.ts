@@ -13,15 +13,34 @@ export interface StorageOptions {
 }
 
 export class StorageService {
-  private static readonly ALLOWED_MIME_TYPES = {
+  private static readonly ALLOWED_MIME_TYPES: Record<string, string> = {
+    // Document formats
     'application/pdf': '.pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'text/plain': '.txt',
+    'application/rtf': '.rtf',
+    'text/rtf': '.rtf',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+    'text/csv': '.csv',
+    'application/csv': '.csv',
+    'application/epub+zip': '.epub',
+    'text/html': '.html',
+    'application/xhtml+xml': '.html',
+    // Image formats
     'image/jpeg': '.jpg',
     'image/png': '.png',
     'image/webp': '.webp',
   }
 
-  private static readonly MAX_FILE_SIZE = {
-    pdf: 50 * 1024 * 1024, // 50MB
+  private static readonly MAX_FILE_SIZE: Record<string, number> = {
+    pdf: 50 * 1024 * 1024,   // 50MB
+    docx: 50 * 1024 * 1024,  // 50MB
+    txt: 10 * 1024 * 1024,   // 10MB
+    rtf: 20 * 1024 * 1024,   // 20MB
+    pptx: 100 * 1024 * 1024, // 100MB
+    csv: 50 * 1024 * 1024,   // 50MB
+    epub: 50 * 1024 * 1024,  // 50MB
+    html: 10 * 1024 * 1024,  // 10MB
     image: 10 * 1024 * 1024, // 10MB
   }
 
@@ -147,8 +166,26 @@ export class StorageService {
       throw new Error(`File type ${mimeType} is not allowed`)
     }
 
-    const fileType = mimeType.startsWith('image/') ? 'image' : 'pdf'
-    const sizeLimit = maxSize || this.MAX_FILE_SIZE[fileType as keyof typeof this.MAX_FILE_SIZE]
+    // Determine file type category for size limits
+    let fileType = 'pdf' // default
+    if (mimeType.startsWith('image/')) {
+      fileType = 'image'
+    } else if (mimeType.includes('wordprocessingml')) {
+      fileType = 'docx'
+    } else if (mimeType === 'text/plain') {
+      fileType = 'txt'
+    } else if (mimeType.includes('rtf')) {
+      fileType = 'rtf'
+    } else if (mimeType.includes('presentationml')) {
+      fileType = 'pptx'
+    } else if (mimeType.includes('csv')) {
+      fileType = 'csv'
+    } else if (mimeType.includes('epub')) {
+      fileType = 'epub'
+    } else if (mimeType.includes('html') || mimeType.includes('xhtml')) {
+      fileType = 'html'
+    }
+    const sizeLimit = maxSize || this.MAX_FILE_SIZE[fileType] || this.MAX_FILE_SIZE.pdf
 
     if (buffer.length > sizeLimit) {
       throw new Error(`File size exceeds ${sizeLimit / (1024 * 1024)}MB limit`)

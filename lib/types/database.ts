@@ -44,6 +44,9 @@ export interface Database {
           source: string
           storage_path: string | null
           page_count: number
+          file_type: 'pdf' | 'docx' | 'txt' | 'rtf' | 'pptx' | 'csv' | 'epub' | 'html'
+          preview_html: string | null
+          preview_image_path: string | null
           processing_status: 'pending' | 'processing' | 'completed' | 'failed'
           processing_error: string | null
           created_at: string
@@ -56,6 +59,9 @@ export interface Database {
           source: string
           storage_path?: string | null
           page_count: number
+          file_type?: 'pdf' | 'docx' | 'txt' | 'rtf' | 'pptx' | 'csv' | 'epub' | 'html'
+          preview_html?: string | null
+          preview_image_path?: string | null
           processing_status?: 'pending' | 'processing' | 'completed' | 'failed'
           processing_error?: string | null
           created_at?: string
@@ -68,6 +74,9 @@ export interface Database {
           source?: string
           storage_path?: string | null
           page_count?: number
+          file_type?: 'pdf' | 'docx' | 'txt' | 'rtf' | 'pptx' | 'csv' | 'epub' | 'html'
+          preview_html?: string | null
+          preview_image_path?: string | null
           processing_status?: 'pending' | 'processing' | 'completed' | 'failed'
           processing_error?: string | null
           created_at?: string

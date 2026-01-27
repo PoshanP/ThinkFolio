@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, X, ArrowLeft, ZoomIn, ZoomOut, RotateCw, MessageSquare, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, X, ArrowLeft, ZoomIn, ZoomOut, RotateCw, MessageSquare, ChevronUp, ChevronDown, FileText } from "lucide-react";
 import { STYLE_CLASSES } from "@/lib/constants/ui";
+
+export type FileType = 'pdf' | 'docx' | 'txt' | 'rtf' | 'pptx' | 'csv' | 'epub' | 'html';
 
 // Types for PDF.js (loaded dynamically)
 type PDFDocumentProxy = {
@@ -23,6 +25,10 @@ interface MobilePdfViewProps {
   onBack?: () => void;
   onChatOpen?: () => void;
   messageCount?: number;
+  // Document type props
+  fileType?: FileType;
+  previewHtml?: string | null;
+  previewImageUrl?: string | null;
 }
 
 export function MobilePdfView({
@@ -33,7 +39,13 @@ export function MobilePdfView({
   onBack,
   onChatOpen,
   messageCount = 0,
+  fileType = 'pdf',
+  previewHtml,
+  previewImageUrl,
 }: MobilePdfViewProps) {
+  // Debug logging
+  console.log('MobilePdfView props:', { fileType, previewHtml: previewHtml?.slice(0, 100), previewImageUrl, pdfUrl: pdfUrl?.slice(0, 50) });
+
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -321,6 +333,118 @@ export function MobilePdfView({
     );
   }
 
+  // For non-PDF file types, render HTML preview or alternative viewer
+  // Check this BEFORE the pdfUrl check since non-PDF files use previewHtml
+  if (fileType && fileType !== 'pdf') {
+    // PPTX with image preview
+    if (fileType === 'pptx' && previewImageUrl) {
+      return (
+        <div className="relative flex flex-col h-full bg-gray-100 dark:bg-gray-900">
+          <FloatingBackButton />
+          <div className="flex-1 overflow-auto p-4">
+            <div className="flex flex-col items-center gap-4">
+              <img
+                src={previewImageUrl}
+                alt="Slide preview"
+                className="max-w-full shadow-lg rounded-lg"
+              />
+              {previewHtml && (
+                <div
+                  className="w-full bg-white dark:bg-gray-800 rounded-lg shadow p-4 prose dark:prose-invert prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                />
+              )}
+            </div>
+          </div>
+          {/* Chat button */}
+          {onChatOpen && (
+            <div className="fixed bottom-4 right-4 z-20">
+              <button
+                onClick={onChatOpen}
+                className="relative p-3 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-lg flex items-center justify-center"
+              >
+                <MessageSquare className="h-6 w-6 text-white" />
+                {messageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    {messageCount > 9 ? '9+' : messageCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // HTML preview available (DOCX, RTF, EPUB, HTML, CSV)
+    if (previewHtml) {
+      return (
+        <div className="relative flex flex-col h-full bg-gray-100 dark:bg-gray-900">
+          <FloatingBackButton />
+          <div className="flex-1 overflow-auto">
+            <div className="bg-white dark:bg-gray-800 min-h-full p-4">
+              <div
+                className="prose dark:prose-invert prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            </div>
+          </div>
+          {/* Chat button */}
+          {onChatOpen && (
+            <div className="fixed bottom-4 right-4 z-20">
+              <button
+                onClick={onChatOpen}
+                className="relative p-3 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-lg flex items-center justify-center"
+              >
+                <MessageSquare className="h-6 w-6 text-white" />
+                {messageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    {messageCount > 9 ? '9+' : messageCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Fallback for files without preview - show file icon and info
+    return (
+      <div className="relative flex flex-col h-full bg-gray-100 dark:bg-gray-900">
+        <FloatingBackButton />
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center mb-4">
+            <FileText className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">
+            {fileType.toUpperCase()} Document
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 text-center">
+            Preview not available. You can still chat about this document.
+          </p>
+        </div>
+        {/* Chat button */}
+        {onChatOpen && (
+          <div className="fixed bottom-4 right-4 z-20">
+            <button
+              onClick={onChatOpen}
+              className="relative p-3 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-lg flex items-center justify-center"
+            >
+              <MessageSquare className="h-6 w-6 text-white" />
+              {messageCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                  {messageCount > 9 ? '9+' : messageCount}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // For PDF files, check if URL is available
   if (!pdfUrl || pdfError) {
     return (
       <div className="relative flex flex-col h-full bg-gray-50 dark:bg-gray-900">
