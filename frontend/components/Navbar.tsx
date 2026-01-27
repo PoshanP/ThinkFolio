@@ -77,7 +77,7 @@ export function Navbar() {
                 <div className="hidden md:flex items-center space-x-6">
                   <Link
                     href={ROUTES.papers}
-                    className={`flex items-center space-x-2 ${STYLE_CLASSES.textSecondary} hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors`}
+                    className={`flex items-center space-x-2 ${STYLE_CLASSES.textSecondary} hover:text-sky-600 dark:hover:text-sky-400 transition-colors`}
                   >
                     <FileText className="h-4 w-4" />
                     <span>My Library</span>
@@ -92,7 +92,7 @@ export function Navbar() {
                   <>
                     <button
                       onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                      className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px]"
+                      className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px]"
                       aria-expanded={isUserMenuOpen}
                       aria-haspopup="true"
                     >

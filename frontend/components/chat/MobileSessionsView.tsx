@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Trash2, Search, ArrowLeft } from "lucide-react";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 interface ChatSession {
   id: string;
@@ -67,7 +68,7 @@ export function MobileSessionsView({
           {filterPaperId && (
             <button
               onClick={onNewSession}
-              className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className={`p-2 rounded-lg text-white min-h-[44px] min-w-[44px] flex items-center justify-center ${STYLE_CLASSES.buttonPrimary}`}
               aria-label="New conversation"
             >
               <Plus className="h-5 w-5" />
@@ -84,7 +85,7 @@ export function MobileSessionsView({
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
+              className={`w-full pl-10 pr-4 py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 ${STYLE_CLASSES.inputFocusRing} min-h-[44px]`}
             />
           </div>
         )}
@@ -102,7 +103,7 @@ export function MobileSessionsView({
             {filterPaperId && !searchTerm && (
               <button
                 onClick={onNewSession}
-                className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium min-h-[44px]"
+                className={`mt-4 px-4 py-2 text-white rounded-lg text-sm font-medium min-h-[44px] ${STYLE_CLASSES.buttonPrimary}`}
               >
                 Start a conversation
               </button>
@@ -115,7 +116,7 @@ export function MobileSessionsView({
                 key={session.id}
                 className={`flex items-center px-4 py-3 cursor-pointer transition-colors ${
                   currentSessionId === session.id
-                    ? "bg-indigo-50 dark:bg-indigo-900/20"
+                    ? STYLE_CLASSES.activeItem
                     : "hover:bg-gray-50 dark:hover:bg-gray-800"
                 }`}
                 onClick={() => onSessionSelect(session)}
@@ -124,7 +125,7 @@ export function MobileSessionsView({
                   <div
                     className={`text-sm font-medium truncate ${
                       currentSessionId === session.id
-                        ? "text-indigo-600 dark:text-indigo-400"
+                        ? STYLE_CLASSES.textThemePrimary
                         : "text-gray-900 dark:text-white"
                     }`}
                   >

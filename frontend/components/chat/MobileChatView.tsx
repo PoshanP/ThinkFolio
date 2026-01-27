@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 interface Message {
   id: string;
@@ -80,7 +81,7 @@ export function MobileChatView({
                 {message.role === "user" ? (
                   <div className="flex justify-end">
                     <div className="max-w-[85%]">
-                      <div className="bg-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm">
+                      <div className={`${STYLE_CLASSES.buttonPrimary} text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm`}>
                         <div className="whitespace-pre-wrap text-sm leading-relaxed">
                           {message.content}
                         </div>
@@ -139,12 +140,12 @@ export function MobileChatView({
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             disabled={isLoading}
-            className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 min-h-[44px]"
+            className={`flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 ${STYLE_CLASSES.inputFocusRing} min-h-[44px]`}
           />
           <button
             onClick={onSendMessage}
             disabled={!input.trim() || isLoading}
-            className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className={`p-3 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${STYLE_CLASSES.buttonPrimary}`}
             aria-label="Send message"
           >
             <Send className="h-5 w-5" />

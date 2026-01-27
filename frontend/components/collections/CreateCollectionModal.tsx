@@ -5,7 +5,7 @@ import { X, Loader2, Plus } from "lucide-react";
 import { ColorPicker } from "./ColorPicker";
 import { IconPicker } from "./IconPicker";
 import { createCollection } from "@/lib/api/collections";
-import { DEFAULT_COLLECTION_COLOR, DEFAULT_COLLECTION_ICON } from "@/lib/constants";
+import { DEFAULT_COLLECTION_COLOR, DEFAULT_COLLECTION_ICON, STYLE_CLASSES } from "@/lib/constants";
 import { useAlert } from "@/lib/contexts/AlertContext";
 
 interface CreateCollectionModalProps {
@@ -110,7 +110,7 @@ export function CreateCollectionModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
               placeholder="e.g., Research Papers"
               autoFocus
             />
@@ -133,7 +133,7 @@ export function CreateCollectionModal({
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"
               placeholder="Optional description..."
             />
           </div>
@@ -170,7 +170,7 @@ export function CreateCollectionModal({
             <button
               type="submit"
               disabled={saving || !name.trim()}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white ${STYLE_CLASSES.buttonPrimary} disabled:opacity-50 disabled:cursor-not-allowed rounded-lg`}
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Upload, MessageSquare, BookOpen, Sparkles, ArrowRight, CheckCircle, FileText, Zap, FileCheck, Users, MessagesSquare, Files } from "lucide-react";
+import { Upload, MessageSquare, BookOpen, Sparkles, ArrowRight, CheckCircle, FileText, Zap, FileCheck } from "lucide-react";
+// Commented out stats icons - will re-add when stats section is enabled
+// import { Users, MessagesSquare, Files } from "lucide-react";
 import {
-  BRAND,
   BRAND_COPY,
   ASSETS,
   EXTERNAL_LINKS,
@@ -14,8 +15,10 @@ import {
   ICON_SIZES,
   FEATURE_ICON_CONTAINER,
   STYLE_CLASSES,
+  BACKGROUND_ORBS,
   FEATURES,
   FEATURE_COLORS,
+  SUPPORTED_FORMATS,
 } from "@/lib/constants";
 import { useScrollAnimation } from "@/lib/hooks/useScrollAnimation";
 
@@ -59,30 +62,23 @@ export function LandingPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] relative overflow-hidden">
       {/* Animated Background Elements */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+      <div className={BACKGROUND_ORBS.container}>
         {/* Primary gradient orb - top right (sky blue) */}
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-sky-400/30 via-cyan-400/20 to-transparent dark:from-sky-600/20 dark:via-cyan-600/10 rounded-full blur-3xl animate-float-slow" />
-
+        <div className={BACKGROUND_ORBS.orb1} />
         {/* Secondary gradient orb - bottom left (emerald) */}
-        <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-gradient-to-tr from-emerald-400/25 via-teal-400/15 to-transparent dark:from-emerald-600/15 dark:via-teal-600/10 rounded-full blur-3xl animate-float-slow-reverse" />
-
+        <div className={BACKGROUND_ORBS.orb2} />
         {/* Tertiary orb - center right (mixed) */}
-        <div className="absolute top-1/2 -right-20 w-64 h-64 bg-gradient-to-l from-sky-300/20 via-emerald-400/10 to-transparent dark:from-sky-500/15 dark:via-emerald-500/10 rounded-full blur-3xl animate-pulse-subtle" />
-
+        <div className={BACKGROUND_ORBS.orb3} />
         {/* Small accent orb - top left (amber/beige) */}
-        <div className="absolute top-32 left-20 w-32 h-32 bg-gradient-to-br from-amber-300/20 to-yellow-400/10 dark:from-amber-400/15 dark:to-yellow-500/10 rounded-full blur-2xl animate-float" />
-
+        <div className={BACKGROUND_ORBS.orb4} />
         {/* Mid-page accent orb */}
-        <div className="absolute top-[60%] left-1/4 w-48 h-48 bg-gradient-to-tr from-teal-400/15 via-sky-400/10 to-transparent dark:from-teal-500/10 dark:via-sky-500/5 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: '-5s' }} />
-
+        <div className={BACKGROUND_ORBS.orb5} style={{ animationDelay: '-5s' }} />
         {/* Subtle grid pattern overlay */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.04]" />
-
+        <div className={BACKGROUND_ORBS.grid} />
         {/* Noise texture for depth */}
-        <div className="absolute inset-0 bg-noise opacity-[0.015] dark:opacity-[0.03] mix-blend-overlay" />
-
+        <div className={BACKGROUND_ORBS.noise} />
         {/* Radial vignette for depth */}
-        <div className="absolute inset-0 bg-radial-vignette" />
+        <div className={BACKGROUND_ORBS.vignette} />
       </div>
 
       <div className="relative">
@@ -103,9 +99,9 @@ export function LandingPage() {
           <div className="text-center max-w-4xl mx-auto relative">
             {/* AI-Powered Badge */}
             <div className="flex justify-center mb-6">
-              <div className="badge-shimmer inline-flex items-center gap-2 px-4 py-2 rounded-full border border-sky-200 dark:border-sky-700 bg-white/80 dark:bg-gray-900/80">
-                <Zap className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                <span className="text-sm font-medium text-sky-600 dark:text-sky-400">
+              <div className={`badge-shimmer inline-flex items-center gap-2 px-4 py-2 rounded-full border ${STYLE_CLASSES.badgePrimary}`}>
+                <Zap className={`${ICON_SIZES.xs} ${STYLE_CLASSES.iconPrimary}`} />
+                <span className={`text-sm font-medium ${STYLE_CLASSES.badgeText}`}>
                   AI-Powered Document Intelligence
                 </span>
               </div>
@@ -124,7 +120,7 @@ export function LandingPage() {
               <div className="gradient-border-btn">
                 <Link
                   href={ROUTES.auth}
-                  className="inline-flex items-center justify-center gap-2 bg-white dark:bg-gray-900 text-sky-600 dark:text-sky-400 font-semibold px-8 py-3 rounded-lg"
+                  className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonSecondary} px-8 py-3 rounded-lg`}
                 >
                   {BRAND_COPY.hero.cta}
                   <ArrowRight className={ICON_SIZES.xs} />
@@ -134,7 +130,7 @@ export function LandingPage() {
 
             {/* Supported Formats */}
             <div className="mt-10 flex flex-wrap justify-center gap-3">
-              {['PDF', 'DOCX', 'TXT', 'Research Papers'].map((format) => (
+              {SUPPORTED_FORMATS.map((format) => (
                 <span
                   key={format}
                   className="format-badge inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
@@ -147,7 +143,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Stats Section */}
+        {/* Stats Section - Commented out for now, will add with real data later
         <section className="py-8 sm:py-12">
           <ScrollSection stagger>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
@@ -159,9 +155,9 @@ export function LandingPage() {
               ].map((stat, index) => (
                 <div
                   key={index}
-                  className="stat-glow text-center p-4 sm:p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                  className={`stat-glow text-center p-4 sm:p-6 rounded-xl bg-white dark:bg-gray-800 ${STYLE_CLASSES.borderDefault} border`}
                 >
-                  <stat.icon className="h-6 w-6 mx-auto mb-2 text-sky-500 dark:text-sky-400" />
+                  <stat.icon className={`${ICON_SIZES.md} mx-auto mb-2 ${STYLE_CLASSES.iconPrimary}`} />
                   <div className="stat-number text-2xl sm:text-3xl font-bold">{stat.value}</div>
                   <div className={`text-xs sm:text-sm ${STYLE_CLASSES.textMuted}`}>{stat.label}</div>
                 </div>
@@ -169,6 +165,7 @@ export function LandingPage() {
             </div>
           </ScrollSection>
         </section>
+        */}
 
         {/* How It Works Section */}
         <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
@@ -260,10 +257,10 @@ export function LandingPage() {
               </ul>
             </div>
 
-            <div className="bg-gradient-to-br from-sky-50 to-emerald-50 dark:from-sky-900/20 dark:to-emerald-900/20 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-sky-100 dark:border-sky-800 card-hover">
+            <div className={`${STYLE_CLASSES.gradientCard} rounded-xl p-6 sm:p-8 card-hover`}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="animate-float">
-                  <Sparkles className={`${ICON_SIZES.md} text-sky-600 dark:text-sky-400`} />
+                  <Sparkles className={`${ICON_SIZES.md} ${STYLE_CLASSES.iconPrimary}`} />
                 </div>
                 <h3 className={`text-lg font-semibold ${STYLE_CLASSES.textPrimary}`}>
                   {BRAND_COPY.benefits.aiCard.title}
@@ -282,10 +279,10 @@ export function LandingPage() {
 
         {/* CTA Section */}
         <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
-          <div className="text-center cta-gradient rounded-xl p-8 sm:p-12 border border-sky-200 dark:border-sky-800 relative overflow-hidden">
+          <div className={`text-center ${STYLE_CLASSES.ctaSection} p-8 sm:p-12 relative overflow-hidden`}>
             {/* Decorative elements */}
-            <div className="absolute top-0 left-0 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+            <div className={`absolute top-0 left-0 w-32 h-32 ${STYLE_CLASSES.ctaGlow} rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2`} />
+            <div className={`absolute bottom-0 right-0 w-32 h-32 ${STYLE_CLASSES.ctaGlowSecondary} rounded-full blur-3xl translate-x-1/2 translate-y-1/2`} />
 
             <div className="relative">
               <h2 className={`text-2xl sm:text-3xl font-bold ${STYLE_CLASSES.textPrimary} mb-4`}>
@@ -297,7 +294,7 @@ export function LandingPage() {
               <div className="gradient-border-btn inline-block hover:scale-105 transition-transform duration-300">
                 <Link
                   href={ROUTES.auth}
-                  className="inline-flex items-center justify-center gap-2 bg-white dark:bg-gray-900 text-sky-600 dark:text-sky-400 font-semibold px-8 py-3 rounded-lg"
+                  className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonSecondary} px-8 py-3 rounded-lg`}
                 >
                   {BRAND_COPY.hero.ctaSecondary}
                   <ArrowRight className={ICON_SIZES.xs} />

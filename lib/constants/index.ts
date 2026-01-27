@@ -13,6 +13,18 @@ export const APP_DESCRIPTION = BRAND.metaDescription
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 export const ALLOWED_FILE_TYPES = ['application/pdf']
 
+// Supported document formats for display
+export const SUPPORTED_FORMATS = [
+  'PDF',
+  'DOCX',
+  'TXT',
+  'RTF',
+  'PPTX',
+  'CSV',
+  'EPUB',
+  'HTML',
+] as const
+
 export const CHUNK_SIZE = 500
 export const CHUNK_OVERLAP = 50
 export const TOP_K_CHUNKS = 5

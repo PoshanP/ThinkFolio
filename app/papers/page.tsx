@@ -20,6 +20,7 @@ import { useCollections, useCollectionPapers, invalidateCollectionCaches } from 
 import { CollectionWithCount } from "@/lib/types/database";
 import { formatDate } from "@/lib/utils/dateFormat";
 import { renderPdfFirstPage } from "@/lib/utils/pdfPreview";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 // Loading skeleton component
 function PapersPageSkeleton() {
@@ -359,7 +360,7 @@ function PapersPageContent() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search papers..."
-              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[44px]"
+              className={`w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 ${STYLE_CLASSES.inputFocusRing} focus:border-transparent min-h-[44px]`}
             />
           </div>
 
@@ -382,7 +383,7 @@ function PapersPageContent() {
                 <div
                   key={paper.id}
                   onClick={() => createChatSession(paper.id)}
-                  className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer group hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-all"
+                  className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer group hover:shadow-lg hover:border-sky-300 dark:hover:border-sky-600 transition-all"
                 >
                   {/* Thumbnail */}
                   <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-900">
@@ -402,12 +403,12 @@ function PapersPageContent() {
 
                   {/* Info */}
                   <div className="p-3">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-1">
+                    <h3 className={`text-sm font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors mb-1`}>
                       {paper.title}
                     </h3>
                     <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                       <span>{formatDate(paper.created_at)} • {paper.page_count}p</span>
-                      <span className="px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded">
+                      <span className={`px-1.5 py-0.5 ${STYLE_CLASSES.activeItem} ${STYLE_CLASSES.textThemePrimary} rounded`}>
                         {paper.chat_count || 0} chats
                       </span>
                     </div>
@@ -427,7 +428,7 @@ function PapersPageContent() {
                             e.stopPropagation();
                             setAddToCollectionPaper({ id: paper.id, title: paper.title });
                           }}
-                          className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          className={`p-2 text-gray-400 ${STYLE_CLASSES.hoverTextPrimary} rounded transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center`}
                           title="Add to collection"
                         >
                           <FolderPlus className="h-4 w-4" />

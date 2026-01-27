@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { STYLE_CLASSES } from '@/lib/constants';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -18,7 +19,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        <Loader2 className={`h-8 w-8 animate-spin ${STYLE_CLASSES.spinnerColor}`} />
       </div>
     );
   }

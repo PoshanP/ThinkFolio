@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2, X, ZoomIn, ZoomOut, RotateCw, ChevronUp, ChevronDown, MessageSquare } from "lucide-react";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 // Types for PDF.js (loaded dynamically)
 type PDFDocumentProxy = {
@@ -402,7 +403,7 @@ export function PdfViewer({
             <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
             <button
               onClick={onChatOpen}
-              className="relative p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center"
+              className={`relative p-2 rounded-lg flex items-center justify-center ${STYLE_CLASSES.buttonPrimary}`}
               title="Open chat"
             >
               <MessageSquare className="h-4 w-4 text-white" />
