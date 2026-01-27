@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Upload, MessageSquare, BookOpen, Sparkles, ArrowRight, CheckCircle, FileText, Zap, FileCheck, Users, MessagesSquare, Files } from "lucide-react";
+import { Upload, MessageSquare, BookOpen, Sparkles, ArrowRight, CheckCircle, FileText, Zap, FileCheck } from "lucide-react";
+// Commented out stats icons - will re-add when stats section is enabled
+// import { Users, MessagesSquare, Files } from "lucide-react";
 import {
   BRAND,
   BRAND_COPY,
@@ -147,7 +149,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Stats Section */}
+        {/* Stats Section - Commented out for now, will add with real data later
         <section className="py-8 sm:py-12">
           <ScrollSection stagger>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
@@ -169,6 +171,7 @@ export function LandingPage() {
             </div>
           </ScrollSection>
         </section>
+        */}
 
         {/* How It Works Section */}
         <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
