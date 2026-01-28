@@ -7,6 +7,7 @@ import { CreateCollectionModal } from "./CreateCollectionModal";
 import { EditCollectionModal } from "./EditCollectionModal";
 import { useCollections } from "@/lib/hooks/useCollections";
 import { CollectionWithCount } from "@/lib/types/database";
+import { STYLE_CLASSES } from "@/lib/constants";
 
 interface CollectionsSidebarProps {
   selectedCollectionId: string | null;
@@ -54,7 +55,7 @@ export function CollectionsSidebar({
             onClick={() => onSelectCollection(null)}
             className={`p-3 transition-colors ${
               selectedCollectionId === null
-                ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30"
+                ? STYLE_CLASSES.activeNavItem
                 : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
             title="All Papers"
@@ -85,7 +86,7 @@ export function CollectionsSidebar({
           {/* Add collection button */}
           <button
             onClick={() => setShowCreateModal(true)}
-            className="p-3 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border-t border-gray-200 dark:border-gray-800"
+            className="p-3 text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border-t border-gray-200 dark:border-gray-800"
             title="Create collection"
           >
             <Plus className="h-5 w-5 mx-auto" />
@@ -111,7 +112,7 @@ export function CollectionsSidebar({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
               title="Create collection"
             >
               <Plus className="h-4 w-4" />
@@ -134,7 +135,7 @@ export function CollectionsSidebar({
             onClick={() => onSelectCollection(null)}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
               selectedCollectionId === null
-                ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800"
+                ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-800"
                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent"
             }`}
           >
@@ -144,7 +145,7 @@ export function CollectionsSidebar({
             </div>
             <span className={`text-xs px-2 py-0.5 rounded-full ${
               selectedCollectionId === null
-                ? "bg-indigo-200 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300"
+                ? "bg-sky-200 dark:bg-sky-800 text-sky-700 dark:text-sky-300"
                 : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
             }`}>
               {totalPaperCount}
@@ -226,7 +227,7 @@ export function CollectionsSidebar({
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                className={`text-sm ${STYLE_CLASSES.linkPrimary}`}
               >
                 Create your first collection
               </button>

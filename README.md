@@ -1,18 +1,32 @@
-# ThinkFolio - Research Paper Chat App
+# ThinkFolio
 
-A comprehensive research paper management and AI chat application. Upload PDFs, engage in intelligent conversations with your documents, and get precise citations and insights. Built with Next.js 15, Supabase, and OpenAI for a seamless research experience.
+**AI-Powered Document Intelligence**
 
-## 🚀 Features
+Reading that talks back. Think faster. Struggle less.
 
-- **PDF Upload & Processing**: Upload research papers and automatically chunk them for AI processing
-- **AI-Powered Chat**: Chat with your papers using GPT-4 with citations and references
-- **User Authentication**: Secure authentication with Supabase Auth
-- **Session Management**: Save and manage chat sessions
-- **Modern UI**: Clean, responsive interface built with Tailwind CSS
-- **Real-time Updates**: Live chat interface with streaming responses
-- **Citation Tracking**: AI responses include citations with page references
+Upload any document and chat with it—tax forms, insurance policies, contracts, terms & conditions, research papers, manuals. Get instant answers with page citations.
 
-## 🛠 Tech Stack
+## Features
+
+### Document Intelligence
+- **Multi-Format Support**: PDF, DOCX, TXT, RTF, PPTX, CSV, EPUB, HTML (up to 50MB)
+- **AI Chat**: Natural conversations with your documents using GPT-4
+- **Precise Citations**: Every answer includes exact page references
+- **Smart Chunking**: Documents intelligently split for accurate retrieval
+
+### Organization
+- **Collections**: Organize documents by topic, project, or category
+- **Favorites**: Quick access to your most important files
+- **Bookmarks**: Mark important sections and pages
+- **Reading List**: Queue documents for later review
+- **Recent Reads**: Pick up where you left off
+
+### Reading Experience
+- **PDF Reader**: Clean, simplistic reader with AI chat side panel
+- **Chat Sessions**: Save and revisit AI conversations
+- **Document Library**: Unlimited documents, all searchable
+
+## Tech Stack
 
 ### Frontend
 - **Next.js 15** (App Router)
@@ -33,19 +47,19 @@ A comprehensive research paper management and AI chat application. Upload PDFs, 
 - **Supabase** (Backend Services)
 - **Edge Runtime** (API Routes)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
 │   │   ├── auth/          # Authentication endpoints
 │   │   ├── chat/          # Chat and session management
-│   │   ├── papers/        # Paper upload and management
+│   │   ├── papers/        # Document upload and management
 │   │   ├── health/        # Health check endpoint
 │   │   └── metrics/       # Application metrics
 │   ├── auth/              # Authentication pages
 │   ├── chat/              # Chat interface pages
-│   ├── papers/            # Paper management pages
+│   ├── papers/            # Document management pages
 │   └── profile/           # User profile pages
 ├── frontend/              # Frontend components
 │   └── components/        # Reusable UI components
@@ -60,7 +74,7 @@ A comprehensive research paper management and AI chat application. Upload PDFs, 
 └── public/               # Static assets
 ```
 
-## 🏗 Setup Instructions
+## Setup
 
 ### Prerequisites
 - Node.js 18+
@@ -76,157 +90,68 @@ cd thinkfolio
 npm install
 ```
 
-**Verify installation:**
-```bash
-npm list --depth=0  # Check all dependencies installed correctly
-```
-
 ### 2. Environment Configuration
 
-Copy the environment template:
 ```bash
 cp .env.example .env.local
 ```
 
-Fill in your environment variables in `.env.local`:
+Fill in `.env.local`:
 ```env
-# Supabase Configuration (Get from: Settings > API in Supabase Dashboard)
+# Supabase (Settings > API in Supabase Dashboard)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# OpenAI Configuration (Get from: https://platform.openai.com/api-keys)
+# OpenAI (https://platform.openai.com/api-keys)
 OPENAI_API_KEY=sk-...
 
-# JWT Configuration (Generate with: openssl rand -base64 32)
+# JWT (Generate: openssl rand -base64 32)
 JWT_SECRET=your_jwt_secret_key
 
-# Environment
 NODE_ENV=development
 ```
 
-**Important:** Never commit `.env.local` to version control!
-
 ### 3. Database Setup
 
-1. **Create a new Supabase project** at https://supabase.com/dashboard
-
-2. **Enable the pgvector extension:**
-   - Go to Database > Extensions in Supabase Dashboard
-   - Search for "vector" and enable the `pgvector` extension
-
-3. **Run the database migrations:**
-   - Go to SQL Editor in Supabase Dashboard
-   - Copy and execute the SQL from `supabase/migrations/20240101000000_initial_schema.sql`
-   - Verify tables are created by checking Database > Tables
-
-4. **Set up storage bucket for papers:**
-   - Go to Storage in Supabase Dashboard
-   - Create a new bucket named `papers`
-   - Set it as private (not public)
-   - Configure RLS policies to allow authenticated users to upload/read their own papers
-
-**Verify setup:**
-```bash
-# Check if pgvector is enabled
-# Run in SQL Editor: SELECT * FROM pg_extension WHERE extname = 'vector';
-```
+1. Create a Supabase project at https://supabase.com/dashboard
+2. Enable `pgvector` extension (Database > Extensions)
+3. Run migrations from `supabase/migrations/`
+4. Create `papers` storage bucket (private)
 
 ### 4. Development
 
 ```bash
-# Start development server
 npm run dev
-
 # Open http://localhost:3000
 ```
 
 ### 5. Build & Deploy
 
 ```bash
-# Build for production
 npm run build
-
-# Type checking
 npm run typecheck
-
-# Linting
 npm run lint
 ```
 
-## 🔧 Key Components
+## API Endpoints
 
-### Backend Services
-
-- **PDF Service** (`lib/services/pdf.service.ts`): Handles PDF parsing and text extraction
-- **Storage Service** (`lib/services/storage.service.ts`): Manages file uploads to Supabase Storage
-- **Database Service** (`lib/db/index.ts`): Database operations and query utilities
-- **Authentication** (`lib/utils/auth.ts`): User authentication and authorization
-
-### Frontend Components
-
-- **UploadSection**: PDF upload interface
-- **ChatInterface**: Real-time chat with AI
-- **PaperCard**: Display paper information
-- **Navbar**: Main navigation
-- **StatsCard**: Dashboard metrics display
-
-### API Endpoints
-
-- `POST /api/papers/upload` - Upload and process PDF papers
-- `POST /api/chat/sessions/create` - Create new chat session
+- `POST /api/papers/upload` - Upload and process documents
+- `POST /api/chat/sessions/create` - Create chat session
 - `POST /api/chat/message` - Send message to AI
 - `GET /api/chat/sessions` - Get user's chat sessions
-- `GET /api/health` - Application health check
+- `GET /api/health` - Health check
 
-## 🚧 Current Status
-
-✅ **Completed:**
-- Backend and frontend integration
-- All major components and pages
-- API routes for paper upload and chat
-- Database schema and migrations
-- Authentication system
-- Build configuration
-- Environment setup
-
-⚠️ **Known Issues:**
-- Some lint warnings for unused variables (non-critical)
-- Environment variables need to be configured for full functionality
-- OpenAI API integration requires valid API key
-
-## 🛡 Security Features
+## Security
 
 - Input validation and sanitization
 - Rate limiting on API endpoints
 - JWT token authentication
-- SQL injection prevention with Supabase
-- File type validation for uploads
+- SQL injection prevention
+- File type validation
 - User authorization checks
+- Secure encrypted storage
 
-## 📊 Performance
+## License
 
-- Edge runtime for API routes
-- Static generation where possible
-- Optimized bundle size (~123KB first load)
-- Streaming responses for AI chat
-- Efficient vector similarity search
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
-
-## 📄 License
-
-This project is part of the ThinkFolio research paper management system.
-
-## 🆘 Support
-
-For issues and questions:
-1. Check the existing documentation
-2. Review the API documentation in `API_DOCUMENTATION.md`
-3. Check the `CLAUDE.md` file for development guidelines
+ThinkFolio - AI-Powered Document Intelligence

@@ -8,6 +8,7 @@ import { useProfileData } from "@/lib/hooks/useApi";
 import { ThemeToggle } from "./ThemeToggle";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import { useAlert } from "@/lib/contexts/AlertContext";
+import { STYLE_CLASSES } from "@/lib/constants";
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -73,7 +74,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     onClose();
-    router.push("/auth/login");
+    router.push("/");
   };
 
   if (!isOpen) return null;
@@ -81,9 +82,9 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   if (loading) {
     return (
       <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-2xl">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-6 w-full max-w-md shadow-2xl">
           <div className="flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" />
+            <Loader2 className={`h-8 w-8 animate-spin ${STYLE_CLASSES.spinnerColor}`} />
           </div>
         </div>
       </div>
@@ -93,7 +94,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
   if (!profileData?.user) {
     return (
       <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-2xl">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-6 w-full max-w-md shadow-2xl">
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-400">Please log in to view your profile</p>
           </div>
@@ -109,7 +110,7 @@ export function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
         className="absolute inset-0 bg-black/30"
         onClick={onClose}
       />
-      <div className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg border-t-2 sm:border-2 border-blue-500 dark:border-blue-400 p-4 sm:p-6 w-full sm:max-w-md max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-t-2xl sm:rounded-lg border-t-2 sm:border-2 border-blue-500 dark:border-blue-400 p-4 sm:p-6 w-full sm:max-w-md max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Mobile drag indicator */}
         <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4 sm:hidden" />
 

@@ -1,22 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, User, LogOut, Menu } from "lucide-react";
+import { User, LogOut, Menu, FileText } from "lucide-react";
+import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { BRAND, ASSETS, IMAGE_DIMENSIONS, ROUTES, STYLE_CLASSES } from "@/lib/constants";
 
 export function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, signOut } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const publicPaths = ["/auth/login", "/auth/signup"];
-    setIsAuthenticated(!publicPaths.includes(pathname));
-  }, [pathname]);
+  const isAuthenticated = !!user;
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -33,12 +31,11 @@ export function Navbar() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [isUserMenuOpen]);
 
-  const handleSignOut = useCallback(() => {
+  const handleSignOut = useCallback(async () => {
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
-    setIsAuthenticated(false);
-    router.push("/auth/login");
-  }, [router]);
+    await signOut();
+  }, [signOut]);
 
   const closeMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(false);
@@ -46,7 +43,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+      <nav className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4 md:space-x-8">
@@ -62,10 +59,16 @@ export function Navbar() {
                 </button>
               )}
 
-              <Link href="/" className="flex items-center space-x-2">
-                <FileText className="h-7 w-7 md:h-8 md:w-8 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
-                  ThinkFolio
+              <Link href={ROUTES.home} className="flex items-center space-x-2">
+                <Image
+                  src={ASSETS.logo.path}
+                  alt={ASSETS.logo.alt}
+                  width={IMAGE_DIMENSIONS.logo.navbar.width}
+                  height={IMAGE_DIMENSIONS.logo.navbar.height}
+                  className={`h-6 md:h-7 w-auto ${STYLE_CLASSES.logoTheme}`}
+                />
+                <span className={`text-lg md:text-xl font-bold ${STYLE_CLASSES.textPrimary}`}>
+                  {BRAND.name}
                 </span>
               </Link>
 
@@ -73,8 +76,8 @@ export function Navbar() {
               {isAuthenticated && (
                 <div className="hidden md:flex items-center space-x-6">
                   <Link
-                    href="/papers"
-                    className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                    href={ROUTES.papers}
+                    className={`flex items-center space-x-2 ${STYLE_CLASSES.textSecondary} hover:text-sky-600 dark:hover:text-sky-400 transition-colors`}
                   >
                     <FileText className="h-4 w-4" />
                     <span>My Library</span>
@@ -89,7 +92,7 @@ export function Navbar() {
                   <>
                     <button
                       onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                      className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px]"
+                      className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-sky-600 dark:hover:text-sky-400 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px]"
                       aria-expanded={isUserMenuOpen}
                       aria-haspopup="true"
                     >
@@ -98,11 +101,11 @@ export function Navbar() {
                     </button>
 
                     {isUserMenuOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
+                      <div className={`absolute right-0 mt-2 w-48 ${STYLE_CLASSES.card} shadow-xl py-2 z-50`}>
                         <Link
-                          href="/profile"
+                          href={ROUTES.profile}
                           onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center space-x-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px]"
+                          className={`flex items-center space-x-2 px-4 py-3 ${STYLE_CLASSES.textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700 ${STYLE_CLASSES.touchTarget}`}
                         >
                           <User className="h-4 w-4" />
                           <span>Profile</span>
@@ -118,20 +121,12 @@ export function Navbar() {
                     )}
                   </>
                 ) : (
-                  <div className="flex items-center space-x-2 md:space-x-3">
-                    <Link
-                      href="/auth/login"
-                      className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors px-3 py-2 min-h-[44px]"
-                    >
-                      <span>Sign In</span>
-                    </Link>
-                    <Link
-                      href="/auth/signup"
-                      className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg transition-colors min-h-[44px]"
-                    >
-                      <span>Sign Up</span>
-                    </Link>
-                  </div>
+                  <Link
+                    href={ROUTES.auth}
+                    className={`flex items-center space-x-2 ${STYLE_CLASSES.buttonPrimary} px-4 py-2 rounded-lg ${STYLE_CLASSES.touchTarget}`}
+                  >
+                    <span>Sign In / Sign Up</span>
+                  </Link>
                 )}
               </div>
             </div>

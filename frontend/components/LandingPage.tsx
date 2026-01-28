@@ -1,279 +1,328 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, MessageSquare, FolderOpen, Search, Quote, Bookmark, Globe, Sparkles, BookOpen, Moon } from "lucide-react";
-import { brand, landing } from "@/lib/content";
+import Image from "next/image";
+import { Upload, MessageSquare, BookOpen, Sparkles, ArrowRight, CheckCircle, FileText, Zap, FileCheck } from "lucide-react";
+// Commented out stats icons - will re-add when stats section is enabled
+// import { Users, MessagesSquare, Files } from "lucide-react";
+import {
+  BRAND_COPY,
+  ASSETS,
+  EXTERNAL_LINKS,
+  IMAGE_DIMENSIONS,
+  ROUTES,
+  LOGO_SIZES,
+  ICON_SIZES,
+  FEATURE_ICON_CONTAINER,
+  STYLE_CLASSES,
+  BACKGROUND_ORBS,
+  FEATURES,
+  FEATURE_COLORS,
+  SUPPORTED_FORMATS,
+} from "@/lib/constants";
+import { useScrollAnimation } from "@/lib/hooks/useScrollAnimation";
 
-const featureIcons = [FileText, MessageSquare, Quote, FolderOpen];
-const moreFeatureIcons = [Globe, Sparkles, Bookmark, Moon];
-const stepIcons = [FileText, BookOpen, MessageSquare];
+const HOW_IT_WORKS_ICONS = [Upload, MessageSquare, BookOpen];
+
+// Scroll-animated section wrapper
+function ScrollSection({
+  children,
+  className = "",
+  stagger = false,
+  direction = "up"
+}: {
+  children: React.ReactNode;
+  className?: string;
+  stagger?: boolean;
+  direction?: "up" | "left" | "right" | "scale";
+}) {
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>();
+
+  const hiddenClass = direction === "left" ? "scroll-hidden-left"
+    : direction === "right" ? "scroll-hidden-right"
+    : direction === "scale" ? "scroll-hidden-scale"
+    : "scroll-hidden";
+
+  const visibleClass = direction === "left" ? "scroll-visible-left"
+    : direction === "right" ? "scroll-visible-right"
+    : direction === "scale" ? "scroll-visible-scale"
+    : "scroll-visible";
+
+  return (
+    <div
+      ref={ref}
+      className={`${className} ${stagger ? "scroll-stagger" : ""} ${isVisible ? visibleClass : hiddenClass}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function LandingPage() {
   return (
-    <div className="space-y-12 sm:space-y-16 relative min-h-screen -m-4 sm:-m-6 p-4 sm:p-6 lg:-mx-8 lg:px-8">
-      {/* Twinkling stars animation */}
-      <style>{`
-        @keyframes twinkle {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        @keyframes twinkle-slow {
-          0%, 100% { opacity: 0.8; }
-          50% { opacity: 0.2; }
-        }
-        .stars-layer-1 { animation: twinkle 3s ease-in-out infinite; }
-        .stars-layer-2 { animation: twinkle-slow 4s ease-in-out infinite 1s; }
-        .stars-layer-3 { animation: twinkle 5s ease-in-out infinite 2s; }
-      `}</style>
-
-      {/* Base background */}
-      <div className="fixed inset-0 pointer-events-none bg-gray-900 z-0" />
-
-      {/* Stars layer 1 - bright stars */}
-      <div
-        className="fixed inset-0 pointer-events-none stars-layer-1 z-[1]"
-        style={{
-          background: `
-            radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.95), transparent),
-            radial-gradient(2px 2px at 200px 50px, rgba(255,255,255,0.9), transparent),
-            radial-gradient(2px 2px at 350px 30px, rgba(255,255,255,0.95), transparent),
-            radial-gradient(2px 2px at 550px 140px, rgba(255,255,255,0.9), transparent),
-            radial-gradient(2px 2px at 90px 180px, rgba(255,255,255,0.95), transparent),
-            radial-gradient(2px 2px at 480px 220px, rgba(255,255,255,0.9), transparent),
-            radial-gradient(2px 2px at 150px 280px, rgba(255,255,255,0.95), transparent),
-            radial-gradient(2px 2px at 420px 90px, rgba(255,255,255,0.9), transparent),
-            radial-gradient(2px 2px at 580px 320px, rgba(255,255,255,0.95), transparent),
-            radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.9), transparent),
-            radial-gradient(1.5px 1.5px at 70px 120px, rgba(255,255,255,0.85), transparent),
-            radial-gradient(1.5px 1.5px at 250px 250px, rgba(255,255,255,0.85), transparent)
-          `,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '650px 380px',
-        }}
-      />
-
-      {/* Stars layer 2 - medium stars */}
-      <div
-        className="fixed inset-0 pointer-events-none stars-layer-2 z-[1]"
-        style={{
-          background: `
-            radial-gradient(1.5px 1.5px at 160px 120px, rgba(255,255,255,0.8), transparent),
-            radial-gradient(1.5px 1.5px at 280px 90px, rgba(255,255,255,0.75), transparent),
-            radial-gradient(1.5px 1.5px at 450px 180px, rgba(255,255,255,0.8), transparent),
-            radial-gradient(1.5px 1.5px at 520px 70px, rgba(255,255,255,0.7), transparent),
-            radial-gradient(1.5px 1.5px at 30px 200px, rgba(255,255,255,0.8), transparent),
-            radial-gradient(1.5px 1.5px at 380px 260px, rgba(255,255,255,0.75), transparent),
-            radial-gradient(1.5px 1.5px at 100px 320px, rgba(255,255,255,0.8), transparent),
-            radial-gradient(1.5px 1.5px at 590px 240px, rgba(255,255,255,0.7), transparent),
-            radial-gradient(1.5px 1.5px at 220px 40px, rgba(255,255,255,0.8), transparent),
-            radial-gradient(1.5px 1.5px at 500px 340px, rgba(255,255,255,0.75), transparent),
-            radial-gradient(1.5px 1.5px at 350px 300px, rgba(255,255,255,0.8), transparent),
-            radial-gradient(1.5px 1.5px at 60px 60px, rgba(255,255,255,0.7), transparent)
-          `,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '650px 380px',
-        }}
-      />
-
-      {/* Stars layer 3 - dim stars */}
-      <div
-        className="fixed inset-0 pointer-events-none stars-layer-3 z-[1]"
-        style={{
-          background: `
-            radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.45), transparent),
-            radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 220px 150px, rgba(255,255,255,0.4), transparent),
-            radial-gradient(1px 1px at 320px 200px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 400px 120px, rgba(255,255,255,0.45), transparent),
-            radial-gradient(1px 1px at 500px 60px, rgba(255,255,255,0.4), transparent),
-            radial-gradient(1px 1px at 180px 240px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 280px 30px, rgba(255,255,255,0.45), transparent),
-            radial-gradient(1px 1px at 460px 280px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 550px 200px, rgba(255,255,255,0.4), transparent),
-            radial-gradient(1px 1px at 100px 260px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 620px 100px, rgba(255,255,255,0.45), transparent),
-            radial-gradient(1px 1px at 370px 350px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 15px 310px, rgba(255,255,255,0.4), transparent),
-            radial-gradient(1px 1px at 530px 370px, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1px 1px at 240px 340px, rgba(255,255,255,0.45), transparent),
-            radial-gradient(1px 1px at 420px 40px, rgba(255,255,255,0.4), transparent)
-          `,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '650px 380px',
-        }}
-      />
-
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 relative z-10">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-semibold text-white">
-            {brand.name}
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1">
-            {brand.tagline}
-          </p>
-        </div>
-
-        {/* Auth Actions */}
-        <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-          <Link
-            href="/auth/login"
-            className="px-3 py-2.5 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors min-h-[44px] flex items-center"
-          >
-            {landing.hero.secondaryCta}
-          </Link>
-          <Link
-            href="/auth/signup"
-            className="px-3 py-2.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors min-h-[44px] flex items-center"
-          >
-            {landing.hero.primaryCta}
-          </Link>
-        </div>
+    <div className="min-h-[calc(100vh-4rem)] relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className={BACKGROUND_ORBS.container}>
+        {/* Primary gradient orb - top right (sky blue) */}
+        <div className={BACKGROUND_ORBS.orb1} />
+        {/* Secondary gradient orb - bottom left (emerald) */}
+        <div className={BACKGROUND_ORBS.orb2} />
+        {/* Tertiary orb - center right (mixed) */}
+        <div className={BACKGROUND_ORBS.orb3} />
+        {/* Small accent orb - top left (amber/beige) */}
+        <div className={BACKGROUND_ORBS.orb4} />
+        {/* Mid-page accent orb */}
+        <div className={BACKGROUND_ORBS.orb5} style={{ animationDelay: '-5s' }} />
+        {/* Subtle grid pattern overlay */}
+        <div className={BACKGROUND_ORBS.grid} />
+        {/* Noise texture for depth */}
+        <div className={BACKGROUND_ORBS.noise} />
+        {/* Radial vignette for depth */}
+        <div className={BACKGROUND_ORBS.vignette} />
       </div>
 
-      {/* Hero Section */}
-      <div className="text-center max-w-3xl mx-auto relative z-10">
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
-          {landing.hero.title}
-        </h2>
-        <p className="mt-4 sm:mt-6 text-base sm:text-lg text-gray-400 leading-relaxed">
-          {landing.hero.subtitle}
-        </p>
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-          <Link
-            href="/auth/signup"
-            className="w-full sm:w-auto px-6 py-3 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors min-h-[48px] flex items-center justify-center"
-          >
-            {landing.hero.primaryCta}
-          </Link>
-          <Link
-            href="/auth/login"
-            className="w-full sm:w-auto px-6 py-3 text-sm font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors min-h-[48px] flex items-center justify-center"
-          >
-            {landing.hero.secondaryCta}
-          </Link>
+      <div className="relative">
+        {/* Logo */}
+        <div className="flex justify-center pt-8 pb-4">
+          <Image
+            src={ASSETS.logo.path}
+            alt={ASSETS.logo.alt}
+            width={IMAGE_DIMENSIONS.logo.landing.width}
+            height={IMAGE_DIMENSIONS.logo.landing.height}
+            className={`${LOGO_SIZES.landing} w-auto ${STYLE_CLASSES.logoTheme}`}
+            priority
+          />
         </div>
-      </div>
 
-      {/* Features Section */}
-      <div className="relative z-10">
-        <h3 className="text-xl sm:text-2xl font-semibold text-white text-center mb-8">
-          {landing.features.title}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {landing.features.items.map((feature, index) => {
-            const Icon = featureIcons[index];
-            return (
-              <div
-                key={index}
-                className="bg-gray-800 rounded-lg border border-gray-700 p-5"
-              >
-                <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center mb-4">
-                  <Icon className="h-5 w-5 text-gray-400" />
-                </div>
-                <h4 className="text-base font-semibold text-white mb-2">
-                  {feature.title}
-                </h4>
-                <p className="text-sm text-gray-400">
-                  {feature.description}
-                </p>
+        {/* Hero Section */}
+        <section className="py-8 sm:py-12 lg:py-16 relative">
+          <div className="text-center max-w-4xl mx-auto relative">
+            {/* AI-Powered Badge */}
+            <div className="flex justify-center mb-6">
+              <div className={`badge-shimmer inline-flex items-center gap-2 px-4 py-2 rounded-full border ${STYLE_CLASSES.badgePrimary}`}>
+                <Zap className={`${ICON_SIZES.xs} ${STYLE_CLASSES.iconPrimary}`} />
+                <span className={`text-sm font-medium ${STYLE_CLASSES.badgeText}`}>
+                  AI-Powered Document Intelligence
+                </span>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
 
-      {/* More Features Section */}
-      <div className="relative z-10">
-        <h3 className="text-xl sm:text-2xl font-semibold text-white text-center mb-8">
-          {landing.moreFeatures.title}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {landing.moreFeatures.items.map((feature, index) => {
-            const Icon = moreFeatureIcons[index];
-            return (
-              <div
-                key={index}
-                className="bg-gray-800 rounded-lg border border-gray-700 p-5"
-              >
-                <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center mb-4">
-                  <Icon className="h-5 w-5 text-gray-400" />
-                </div>
-                <h4 className="text-base font-semibold text-white mb-2">
-                  {feature.title}
-                </h4>
-                <p className="text-sm text-gray-400">
-                  {feature.description}
-                </p>
+            <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-bold ${STYLE_CLASSES.textPrimary} leading-tight`}>
+              {BRAND_COPY.hero.title}
+              <span className="block gradient-text mt-2">
+                {BRAND_COPY.hero.subtitle}
+              </span>
+            </h1>
+            <p className={`mt-6 text-lg sm:text-xl ${STYLE_CLASSES.textSecondary} max-w-2xl mx-auto`}>
+              {BRAND_COPY.hero.description}
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="gradient-border-btn">
+                <Link
+                  href={ROUTES.auth}
+                  className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonSecondary} px-8 py-3 rounded-lg`}
+                >
+                  {BRAND_COPY.hero.cta}
+                  <ArrowRight className={ICON_SIZES.xs} />
+                </Link>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
 
-      {/* How It Works Section */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 sm:p-8 relative z-10">
-        <h3 className="text-xl sm:text-2xl font-semibold text-white text-center mb-8">
-          {landing.howItWorks.title}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-          {landing.howItWorks.steps.map((step, index) => {
-            const Icon = stepIcons[index];
-            return (
-              <div key={index} className="text-center">
-                <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-600">
-                  <Icon className="h-6 w-6 text-gray-400" />
+            {/* Supported Formats */}
+            <div className="mt-10 flex flex-wrap justify-center gap-3">
+              {SUPPORTED_FORMATS.map((format) => (
+                <span
+                  key={format}
+                  className="format-badge inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+                >
+                  <FileCheck className="h-3 w-3" />
+                  {format}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Stats Section - Commented out for now, will add with real data later
+        <section className="py-8 sm:py-12">
+          <ScrollSection stagger>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+              {[
+                { icon: Files, value: '10K+', label: 'Documents Processed' },
+                { icon: Users, value: '500+', label: 'Active Users' },
+                { icon: MessagesSquare, value: '50K+', label: 'Questions Answered' },
+                { icon: FileCheck, value: '99%', label: 'Accuracy Rate' },
+              ].map((stat, index) => (
+                <div
+                  key={index}
+                  className={`stat-glow text-center p-4 sm:p-6 rounded-xl bg-white dark:bg-gray-800 ${STYLE_CLASSES.borderDefault} border`}
+                >
+                  <stat.icon className={`${ICON_SIZES.md} mx-auto mb-2 ${STYLE_CLASSES.iconPrimary}`} />
+                  <div className="stat-number text-2xl sm:text-3xl font-bold">{stat.value}</div>
+                  <div className={`text-xs sm:text-sm ${STYLE_CLASSES.textMuted}`}>{stat.label}</div>
                 </div>
-                <div className="text-sm font-medium text-indigo-400 mb-1">
-                  Step {step.step}
+              ))}
+            </div>
+          </ScrollSection>
+        </section>
+        */}
+
+        {/* How It Works Section */}
+        <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
+          <div className="text-center mb-12">
+            <h2 className={`text-2xl sm:text-3xl font-bold ${STYLE_CLASSES.textPrimary}`}>
+              {BRAND_COPY.howItWorks.title}
+            </h2>
+            <p className={`mt-3 ${STYLE_CLASSES.textSecondary}`}>
+              {BRAND_COPY.howItWorks.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
+            {BRAND_COPY.howItWorks.steps.map((step, index) => {
+              const Icon = HOW_IT_WORKS_ICONS[index];
+              const isLast = index === BRAND_COPY.howItWorks.steps.length - 1;
+              return (
+                <div
+                  key={index}
+                  className={`relative ${!isLast ? 'arrow-connector' : ''}`}
+                >
+                  <div className={`${STYLE_CLASSES.sectionBg} rounded-xl p-6 sm:p-8 ${STYLE_CLASSES.borderDefault} border card-hover h-full`}>
+                    <div className={`w-14 h-14 ${FEATURE_COLORS.indigo.bg} ${FEATURE_COLORS.indigo.bgDark} rounded-2xl flex items-center justify-center mb-4 animate-float`} style={{ animationDelay: `${index * 0.2}s` }}>
+                      <Icon className={`h-7 w-7 ${FEATURE_COLORS.indigo.text} ${FEATURE_COLORS.indigo.textDark}`} />
+                    </div>
+                    <h3 className={`text-xl font-semibold ${STYLE_CLASSES.textPrimary} mb-2`}>
+                      {step.title}
+                    </h3>
+                    <p className={STYLE_CLASSES.textSecondary}>
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
-                <h4 className="text-base font-semibold text-white mb-2">
-                  {step.title}
-                </h4>
-                <p className="text-sm text-gray-400">
-                  {step.description}
-                </p>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Features Grid Section */}
+        <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
+          <div className="text-center mb-12">
+            <h2 className={`text-2xl sm:text-3xl font-bold ${STYLE_CLASSES.textPrimary}`}>
+              {BRAND_COPY.features.title}
+            </h2>
+            <p className={`mt-3 ${STYLE_CLASSES.textSecondary}`}>
+              {BRAND_COPY.features.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.id}
+                  className={`${STYLE_CLASSES.sectionBg} rounded-lg p-5 ${STYLE_CLASSES.borderDefault} border feature-card-hover group`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`${FEATURE_ICON_CONTAINER.sm} ${feature.color.bg} ${feature.color.bgDark} rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
+                      <Icon className={`${ICON_SIZES.sm} ${feature.color.text} ${feature.color.textDark}`} />
+                    </div>
+                    <h3 className={`font-semibold ${STYLE_CLASSES.textPrimary}`}>{feature.title}</h3>
+                  </div>
+                  <p className={`text-sm ${STYLE_CLASSES.textSecondary}`}>
+                    {feature.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Benefits Section */}
+        <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div>
+              <h2 className={`text-2xl sm:text-3xl font-bold ${STYLE_CLASSES.textPrimary} mb-6`}>
+                {BRAND_COPY.benefits.title}
+              </h2>
+              <ul className="space-y-4">
+                {BRAND_COPY.benefits.items.map((item, index) => (
+                  <li key={index} className="benefit-item flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-default">
+                    <CheckCircle className="benefit-check h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span className={STYLE_CLASSES.textSecondary}>
+                      <strong className={STYLE_CLASSES.textPrimary}>{item.label}:</strong> {item.description}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className={`${STYLE_CLASSES.gradientCard} rounded-xl p-6 sm:p-8 card-hover`}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="animate-float">
+                  <Sparkles className={`${ICON_SIZES.md} ${STYLE_CLASSES.iconPrimary}`} />
+                </div>
+                <h3 className={`text-lg font-semibold ${STYLE_CLASSES.textPrimary}`}>
+                  {BRAND_COPY.benefits.aiCard.title}
+                </h3>
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <p className={`${STYLE_CLASSES.textSecondary} mb-4`}>
+                {BRAND_COPY.benefits.aiCard.description}
+              </p>
+              <div className={`flex items-center gap-2 text-sm ${STYLE_CLASSES.textMuted}`}>
+                <FileText className={ICON_SIZES.xs} />
+                <span>{BRAND_COPY.benefits.aiCard.fileSupport}</span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      {/* CTA Section */}
-      <div className="text-center relative z-10">
-        <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">
-          {landing.cta.title}
-        </h3>
-        <p className="text-sm sm:text-base text-gray-400 mb-6">
-          {landing.cta.subtitle}
-        </p>
-        <Link
-          href="/auth/signup"
-          className="inline-flex px-6 py-3 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors min-h-[48px] items-center justify-center"
-        >
-          {landing.cta.button}
-        </Link>
-      </div>
+        {/* CTA Section */}
+        <section className={`py-12 sm:py-16 ${STYLE_CLASSES.borderSection}`}>
+          <div className={`text-center ${STYLE_CLASSES.ctaSection} p-8 sm:p-12 relative overflow-hidden`}>
+            {/* Decorative elements */}
+            <div className={`absolute top-0 left-0 w-32 h-32 ${STYLE_CLASSES.ctaGlow} rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2`} />
+            <div className={`absolute bottom-0 right-0 w-32 h-32 ${STYLE_CLASSES.ctaGlowSecondary} rounded-full blur-3xl translate-x-1/2 translate-y-1/2`} />
 
-      {/* Footer */}
-      <div className="pt-6 sm:pt-8 border-t border-gray-700 relative z-10">
-        <div className="text-center">
-          <a
-            href="https://devswarm.ai/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-3 text-sm text-gray-400 hover:text-gray-300 transition-colors group min-h-[44px]"
-          >
-            <span>Powered by</span>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://cdn.prod.website-files.com/684228174606b26ec8e3e29e/684b4952707b6e17b3ef79df_Logo.png"
-              alt="DevSwarm"
-              className="h-5 group-hover:opacity-80 transition-opacity"
-            />
-          </a>
-        </div>
+            <div className="relative">
+              <h2 className={`text-2xl sm:text-3xl font-bold ${STYLE_CLASSES.textPrimary} mb-4`}>
+                {BRAND_COPY.cta.title}
+              </h2>
+              <p className={`${STYLE_CLASSES.textSecondary} mb-6 max-w-xl mx-auto`}>
+                {BRAND_COPY.cta.description}
+              </p>
+              <div className="gradient-border-btn inline-block hover:scale-105 transition-transform duration-300">
+                <Link
+                  href={ROUTES.auth}
+                  className={`inline-flex items-center justify-center gap-2 ${STYLE_CLASSES.buttonSecondary} px-8 py-3 rounded-lg`}
+                >
+                  {BRAND_COPY.hero.ctaSecondary}
+                  <ArrowRight className={ICON_SIZES.xs} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className={`py-8 ${STYLE_CLASSES.borderSection}`}>
+          <div className="text-center">
+            <a
+              href={EXTERNAL_LINKS.devswarm.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center space-x-2 px-4 py-3 text-sm ${STYLE_CLASSES.textSecondary} hover:text-gray-800 dark:hover:text-gray-300 transition-colors group ${STYLE_CLASSES.touchTarget}`}
+            >
+              <span>{BRAND_COPY.footer.poweredBy}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={EXTERNAL_LINKS.devswarm.logo}
+                alt={EXTERNAL_LINKS.devswarm.alt}
+                className="h-5 group-hover:opacity-80 transition-opacity"
+              />
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   );

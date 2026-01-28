@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { getSupabaseClient } from "@/lib/hooks/useSupabase";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 interface DashboardStats {
   papers: number;
@@ -36,17 +37,20 @@ const StatsContext = createContext<StatsContextType>({
 export function StatsProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user: authUser } = useAuth();
 
   const fetchStats = useCallback(async () => {
     const supabase = getSupabaseClient();
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Use authUser from context if available, otherwise check with supabase
+      if (!authUser) {
         setStats(defaultStats);
         setLoading(false);
         return;
       }
+
+      const user = authUser;
 
       const [papersData, chatsData, papersWithPages] = await Promise.all([
         supabase.from('papers').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
@@ -81,17 +85,17 @@ export function StatsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authUser]);
 
   const refreshStats = useCallback(async () => {
     // Don't set loading to true for refreshes to avoid UI flicker
     await fetchStats();
   }, [fetchStats]);
 
-  // Initial fetch
+  // Fetch stats when user changes (login/logout)
   useEffect(() => {
     fetchStats();
-  }, [fetchStats]);
+  }, [fetchStats, authUser]);
 
   return (
     <StatsContext.Provider value={{ stats, loading, refreshStats }}>

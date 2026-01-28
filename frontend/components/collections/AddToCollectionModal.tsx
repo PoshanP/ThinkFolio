@@ -6,6 +6,7 @@ import { CollectionIcon } from "./CollectionIcon";
 import { useCollections, usePaperCollections, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
 import { updatePaperCollections } from "@/lib/api/collections";
 import { useAlert } from "@/lib/contexts/AlertContext";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 interface AddToCollectionModalProps {
   isOpen: boolean;
@@ -89,7 +90,7 @@ export function AddToCollectionModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <FolderPlus className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <FolderPlus className={`h-5 w-5 ${STYLE_CLASSES.textThemePrimary}`} />
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
               Add to Collection
             </h2>
@@ -126,14 +127,14 @@ export function AddToCollectionModal({
                     onClick={() => handleToggle(collection.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                       isSelected
-                        ? "bg-indigo-50 dark:bg-indigo-900/20"
+                        ? STYLE_CLASSES.activeItem
                         : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
                     }`}
                   >
                     <div
                       className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                         isSelected
-                          ? "border-indigo-600 bg-indigo-600"
+                          ? STYLE_CLASSES.activeItemBorder
                           : "border-gray-300 dark:border-gray-600"
                       }`}
                     >
@@ -178,7 +179,7 @@ export function AddToCollectionModal({
           <button
             onClick={handleSave}
             disabled={saving || isLoading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${STYLE_CLASSES.buttonPrimary}`}
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             <span>{saving ? "Saving..." : "Save"}</span>
