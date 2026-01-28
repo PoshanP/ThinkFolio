@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { MobileChatView } from "./MobileChatView";
 import { MobilePdfView } from "./MobilePdfView";
 import { MessageSquare, X, ChevronDown, Trash2, Plus, Search } from "lucide-react";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 interface Message {
   id: string;
@@ -132,7 +133,7 @@ export function MobileChatLayout({
   }, [sessionSelectorOpen]);
 
   return (
-    <div className="relative flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="relative flex flex-col h-full">
       {/* PDF View - Full Screen (Default) */}
       <MobilePdfView
         pdfUrl={pdfUrl}
@@ -149,7 +150,7 @@ export function MobileChatLayout({
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/30 backdrop-blur-sm">
           <div
             ref={chatPanelRef}
-            className="bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl flex flex-col animate-slide-up"
+            className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-t-2xl shadow-2xl flex flex-col animate-slide-up"
             style={{ height: '85vh', maxHeight: '85vh' }}
           >
             {/* Chat Panel Header */}
@@ -171,9 +172,9 @@ export function MobileChatLayout({
                 {filterPaperId && (
                   <button
                     onClick={onNewSession}
-                    className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${STYLE_CLASSES.activeItem} hover:bg-sky-100 dark:hover:bg-sky-900/40`}
                   >
-                    <Plus className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    <Plus className={`h-5 w-5 ${STYLE_CLASSES.textThemePrimary}`} />
                   </button>
                 )}
               </div>
@@ -191,7 +192,7 @@ export function MobileChatLayout({
             {sessionSelectorOpen && (
               <div
                 ref={sessionSelectorRef}
-                className="absolute top-16 left-4 right-4 z-10 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-[300px] overflow-hidden flex flex-col"
+                className="absolute top-16 left-4 right-4 z-10 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-[300px] overflow-hidden flex flex-col"
               >
                 {/* Search */}
                 <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -202,7 +203,7 @@ export function MobileChatLayout({
                       value={searchTerm}
                       onChange={(e) => onSearchChange(e.target.value)}
                       placeholder="Search chats..."
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className={`w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${STYLE_CLASSES.inputFocusRing}`}
                     />
                   </div>
                 </div>
@@ -218,7 +219,7 @@ export function MobileChatLayout({
                       <div
                         key={session.id}
                         className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0 ${
-                          currentSession?.id === session.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+                          currentSession?.id === session.id ? STYLE_CLASSES.activeItem : ''
                         }`}
                         onClick={() => handleSessionSelect(session)}
                       >
@@ -271,7 +272,7 @@ export function MobileChatLayout({
                     {filterPaperId && (
                       <button
                         onClick={onNewSession}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors ${STYLE_CLASSES.buttonPrimary}`}
                       >
                         Start New Chat
                       </button>

@@ -14,7 +14,7 @@ import {
   hasPreview
 } from "@/lib/utils/previewCache";
 import { useCollections, useCollectionPapers, invalidateCollectionCaches } from "@/lib/hooks/useCollections";
-import { NEXT_READ_COLLECTION_NAME } from "@/lib/constants";
+import { NEXT_READ_COLLECTION_NAME, STYLE_CLASSES } from "@/lib/constants";
 
 export function NextReadList() {
   const supabase = useSupabase();
@@ -138,7 +138,7 @@ export function NextReadList() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/auth/login');
+        router.push('/auth');
         return;
       }
 
@@ -265,9 +265,9 @@ export function NextReadList() {
   if (nextReadLoading) {
     return (
       <div className="mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-3">
-            <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            <BookOpen className={`h-4 w-4 ${STYLE_CLASSES.iconPrimary}`} />
             <h4 className="text-sm font-medium text-gray-900 dark:text-white">Next Read</h4>
           </div>
           <div className="space-y-2">
@@ -290,7 +290,7 @@ export function NextReadList() {
     <div className="mt-6">
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center gap-2 mb-3">
-          <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+          <BookOpen className={`h-4 w-4 ${STYLE_CLASSES.iconPrimary}`} />
           <h4 className="text-sm font-medium text-gray-900 dark:text-white">
             Next Read {nextReadPapers.length > 0 && `(${nextReadPapers.length})`}
           </h4>
@@ -322,7 +322,7 @@ export function NextReadList() {
                 <div className="w-10 h-12 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
                   {opening === paper.id ? (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Loader2 className="h-4 w-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+                      <Loader2 className={`h-4 w-4 animate-spin ${STYLE_CLASSES.iconPrimary}`} />
                     </div>
                   ) : previewImages[paper.id] ? (
                     <img

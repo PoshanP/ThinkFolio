@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X, FileText, Home, User, LogOut } from "lucide-react";
+import Image from "next/image";
+import { BRAND, ASSETS, IMAGE_DIMENSIONS, ROUTES, STYLE_CLASSES } from "@/lib/constants";
 
 interface MobileNavDrawerProps {
   isOpen: boolean;
@@ -71,9 +73,9 @@ export function MobileNavDrawer({
   }, [isOpen, onClose]);
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: Home },
-    { href: "/papers", label: "My Library", icon: FileText },
-    { href: "/profile", label: "Profile", icon: User },
+    { href: ROUTES.home, label: "Dashboard", icon: Home },
+    { href: ROUTES.papers, label: "My Library", icon: FileText },
+    { href: ROUTES.profile, label: "Profile", icon: User },
   ];
 
   const isActiveLink = (href: string) => {
@@ -95,7 +97,7 @@ export function MobileNavDrawer({
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed top-0 left-0 h-full w-72 max-w-[80vw] bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed top-0 left-0 h-full w-72 max-w-[80vw] bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-xl z-50 transform transition-transform duration-300 ease-out md:hidden ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         role="dialog"
@@ -103,11 +105,17 @@ export function MobileNavDrawer({
         aria-label="Navigation menu"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className={`flex items-center justify-between p-4 ${STYLE_CLASSES.borderDefault} border-b`}>
           <div className="flex items-center space-x-2">
-            <FileText className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
-            <span className="text-lg font-bold text-gray-900 dark:text-white">
-              ThinkFolio
+            <Image
+              src={ASSETS.logo.path}
+              alt={ASSETS.logo.alt}
+              width={IMAGE_DIMENSIONS.logo.mobile.width}
+              height={IMAGE_DIMENSIONS.logo.mobile.height}
+              className={`h-6 w-auto ${STYLE_CLASSES.logoTheme}`}
+            />
+            <span className={`text-lg font-bold ${STYLE_CLASSES.textPrimary}`}>
+              {BRAND.name}
             </span>
           </div>
           <button
@@ -133,7 +141,7 @@ export function MobileNavDrawer({
                       href={item.href}
                       className={`flex items-center space-x-3 px-4 py-3 rounded-lg min-h-[48px] transition-colors ${
                         isActive
-                          ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                          ? STYLE_CLASSES.activeNavItem
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
                     >
@@ -156,14 +164,14 @@ export function MobileNavDrawer({
           ) : (
             <div className="space-y-3">
               <Link
-                href="/auth/login"
-                className="flex items-center justify-center px-4 py-3 rounded-lg min-h-[48px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium"
+                href={ROUTES.auth}
+                className={`flex items-center justify-center px-4 py-3 rounded-lg ${STYLE_CLASSES.touchTargetComfortable} text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium`}
               >
                 Sign In
               </Link>
               <Link
-                href="/auth/signup"
-                className="flex items-center justify-center px-4 py-3 rounded-lg min-h-[48px] bg-indigo-600 hover:bg-indigo-700 text-white transition-colors font-medium"
+                href={ROUTES.auth}
+                className={`flex items-center justify-center px-4 py-3 rounded-lg ${STYLE_CLASSES.touchTargetComfortable} ${STYLE_CLASSES.buttonPrimary}`}
               >
                 Sign Up
               </Link>

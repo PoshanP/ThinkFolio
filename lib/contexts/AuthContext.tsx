@@ -34,11 +34,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === 'SIGNED_OUT') {
         setUser(null);
-        router.push('/auth/login');
+        router.push('/');
       } else if (event === 'TOKEN_REFRESHED') {
         if (!session) {
           setUser(null);
-          router.push('/auth/login');
+          router.push('/auth');
         } else {
           setUser(session.user);
         }
@@ -70,17 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Session error:', error);
         setUser(null);
 
-        // Only redirect to login if we're not already on auth pages
-        if (!window.location.pathname.startsWith('/auth/')) {
-          router.push('/auth/login');
+        // Only redirect to login if we're not on auth pages or home page (landing page)
+        const pathname = window.location.pathname;
+        if (!pathname.startsWith('/auth/') && pathname !== '/') {
+          router.push('/auth');
         }
         return;
       }
 
       if (!session) {
         setUser(null);
-        if (!window.location.pathname.startsWith('/auth/')) {
-          router.push('/auth/login');
+        const pathname = window.location.pathname;
+        if (!pathname.startsWith('/auth/') && pathname !== '/') {
+          router.push('/auth');
         }
       } else {
         // Check if token is expired
@@ -92,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (refreshError || !refreshedSession) {
             console.error('Failed to refresh session:', refreshError);
             setUser(null);
-            router.push('/auth/login');
+            router.push('/auth');
           } else {
             setUser(refreshedSession.user);
           }
@@ -111,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    router.push('/auth/login');
+    router.push('/');
   };
 
   return (

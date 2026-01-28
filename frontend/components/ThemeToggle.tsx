@@ -2,6 +2,7 @@
 
 import { Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "@/lib/contexts/ThemeContext";
+import { STYLE_CLASSES } from "@/lib/constants";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -20,7 +21,7 @@ export function ThemeToggle() {
         onClick={() => handleThemeChange('light')}
         className={`p-2 rounded transition-colors ${
           theme === 'light'
-            ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
+            ? STYLE_CLASSES.toggleButtonActive
             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
         }`}
         title="Light mode"
@@ -32,7 +33,7 @@ export function ThemeToggle() {
         onClick={() => handleThemeChange('dark')}
         className={`p-2 rounded transition-colors ${
           theme === 'dark'
-            ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
+            ? STYLE_CLASSES.toggleButtonActive
             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
         }`}
         title="Dark mode"
@@ -44,7 +45,7 @@ export function ThemeToggle() {
         onClick={() => handleThemeChange('system')}
         className={`p-2 rounded transition-colors ${
           theme === 'system'
-            ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
+            ? STYLE_CLASSES.toggleButtonActive
             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
         }`}
         title="System mode"

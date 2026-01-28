@@ -5,6 +5,7 @@ import { FileText, Download, Trash2, Clock, ChevronDown, ChevronRight, Loader2 }
 import { useSupabase } from "@/lib/hooks/useSupabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useConfirm } from "@/lib/contexts/ConfirmContext";
+import { STYLE_CLASSES } from "@/lib/constants/ui";
 
 interface Session {
   id: string;
@@ -195,7 +196,7 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
                     onClick={() => handleSessionClick(session.id)}
                     className={`w-full text-left p-3 rounded-lg transition-colors ${
                       currentSessionId === session.id
-                        ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-700'
+                        ? `${STYLE_CLASSES.activeItem} border border-sky-300 dark:border-sky-700`
                         : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
@@ -225,7 +226,7 @@ export function PaperSidebar({ paperId }: { paperId: string }) {
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={handleNewSession}
-            className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium">
+            className={`w-full px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium ${STYLE_CLASSES.buttonPrimary}`}>
             New Chat Session
           </button>
         </div>
