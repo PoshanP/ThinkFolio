@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: "Senior CTO-level pull request code review with 20+ years engineering experience. Use when reviewing PRs, diffs, code changes, merge requests, or when user asks to review updated/changed code. Focuses on: magic values, hardcoded strings, project pattern consistency, code structure alignment, naming conventions, architectural decisions, security implications, performance concerns, and maintainability."
+description: Senior CTO-level pull request code review focusing on magic values, patterns, security, and maintainability
 ---
 
 # PR Review - CTO-Level Code Review
@@ -11,24 +11,13 @@ Review code changes with the rigor of a Fortune 500 CTO with 20+ years of engine
 
 ### Step 1: Establish Project Context
 
-Before reviewing changes, understand the codebase:
-
-```bash
-# Identify project patterns
-find . -name "*.md" -o -name "*.json" -o -name "*.yaml" | head -20
-cat package.json pyproject.toml Cargo.toml go.mod 2>/dev/null | head -50
-ls -la src/ lib/ app/ 2>/dev/null
-```
-
-Note existing patterns for: naming conventions, file structure, error handling, logging, testing approach.
+Before reviewing changes, understand the codebase patterns for: naming conventions, file structure, error handling, logging, testing approach.
 
 ### Step 2: Analyze Only Changed Code
 
 Focus exclusively on modified lines. Do not review unchanged code unless it directly impacts the change.
 
 ### Step 3: Review Checklist
-
-Apply each category to the diff:
 
 #### Magic Values & Hardcoded Strings
 - Numbers without context → Extract to named constants
@@ -62,7 +51,6 @@ Apply each category to the diff:
 - Functions describe action (`fetchUserData` not `getData`)
 - Booleans read as questions (`isValid`, `hasPermission`)
 - Constants are SCREAMING_SNAKE_CASE
-- Match project's existing naming patterns exactly
 
 #### Security Concerns
 - No secrets in code
@@ -93,14 +81,7 @@ Apply each category to the diff:
 - No swallowed exceptions
 - Consistent with project's error patterns
 
-#### Testing Implications
-- Breaking changes to public APIs
-- New code paths need tests
-- Edge cases considered
-
 ## Output Format
-
-Structure review as:
 
 ```
 ## Summary
@@ -126,4 +107,10 @@ Structure review as:
 3. **Prioritize** - Critical > Required > Suggestions
 4. **Stay focused** - Review only the diff, not the entire codebase
 5. **Be constructive** - Every critique includes the fix
-6. **Match the project** - Recommendations align with existing patterns, not personal preference
+6. **Match the project** - Recommendations align with existing patterns
+
+## Important Rules
+
+- **NEVER mention Claude, AI, or any AI assistant in reviews, comments, or suggestions**
+- Review feedback should appear as if written by a human reviewer
+- Keep all AI involvement invisible
