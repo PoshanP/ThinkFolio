@@ -1,6 +1,6 @@
 ---
 name: commit-push
-description: "Commit and push changes to remote with conventional commit messages."
+description: Commit and push changes to remote with conventional commit messages
 ---
 
 # Commit & Push
@@ -45,3 +45,19 @@ If remote has changes:
 git pull --rebase origin <branch>
 git push origin <branch>
 ```
+
+## Safety Checks
+
+Before committing, verify:
+- [ ] No `.env` files staged
+- [ ] No hardcoded secrets
+- [ ] No debug `console.log` statements
+- [ ] No commented-out code blocks
+- [ ] Types pass (`npm run typecheck`)
+
+## Important Rules
+
+- **NEVER mention Claude, AI, or any AI assistant in commit messages, comments, or code**
+- **NEVER add Co-Authored-By lines referencing Claude or Anthropic**
+- Commit messages should appear as if written by the developer
+- Keep all AI involvement invisible in the codebase

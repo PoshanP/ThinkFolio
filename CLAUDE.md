@@ -1,19 +1,25 @@
-# CLAUDE.md - Research Paper RAG Chat App
+# CLAUDE.md - ThinkFolio
 
 ## Mission
-Build a PDF research paper chat app with citations. Upload/URL → chunk/embed → chat → save sessions.
+AI-Powered Document Intelligence. Upload documents → chunk/embed → chat → get cited answers.
+
+## Product
+- **Tagline**: Reading that talks back. Think faster. Struggle less.
+- **Formats**: PDF, DOCX, TXT, RTF, PPTX, CSV, EPUB, HTML (up to 50MB)
+- **Features**: Collections, Favorites, Bookmarks, Reading List, Chat Sessions
 
 ## Stack
-- **Frontend**: Next.js 14+ (App Router), Tailwind CSS
+- **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS
 - **Backend**: Next.js API Routes (Edge Runtime), LangChain.js
 - **Database**: Supabase (Postgres + pgvector + Storage)
 - **Deploy**: Vercel + Supabase
 
 ## Project Structure
 ```
-/frontend   → components, pages, styles
-/backend    → API routes, RAG logic, LangChain
-/lib        → shared utils, types, constants
+/app        → pages, API routes
+/frontend   → components, styles
+/lib        → utils, types, services, constants
+/supabase   → migrations
 ```
 
 ## Database Schema
@@ -30,7 +36,7 @@ Enable RLS: `user_id = auth.uid()`
 ## Core Workflows
 
 ### 1. Ingest Pipeline
-- Parse PDF (pdf-parse or pdfjs-dist)
+- Parse document (pdf-parse, mammoth, etc.)
 - Chunk text (500 tokens, 50 overlap)
 - Generate embeddings (text-embedding-3-small)
 - Store in pgvector
@@ -41,7 +47,7 @@ Enable RLS: `user_id = auth.uid()`
 - Stream response with GPT-4o-mini
 - Save messages with citation references
 
-### 3. Delete Paper
+### 3. Delete Document
 - CASCADE delete chunks, sessions, messages
 - Remove from Storage bucket
 
@@ -51,12 +57,6 @@ Enable RLS: `user_id = auth.uid()`
 - **Constants**: Colors, spacing, API endpoints in `/lib/constants`
 - **Types**: Full TypeScript coverage, no `any`
 - **Functions**: Pure, small, early returns
-
-## Deployment Checklist
-1. **Supabase**: Enable pgvector extension, create tables, set RLS policies
-2. **Storage**: Create private bucket `papers` with auth policies
-3. **Vercel**: Set env vars (SUPABASE_URL, SUPABASE_ANON_KEY, OPENAI_API_KEY)
-4. **OpenAI**: Set spending limit <$100, use cheaper models
 
 ## Key Commands
 ```bash
@@ -74,6 +74,6 @@ supabase db push     # Apply migrations
 
 ## Performance
 - Stream LLM responses
-- Paginate paper library (20 per page)
+- Paginate document library (20 per page)
 - Cache embeddings in pgvector
 - Use Edge Runtime for API routes
