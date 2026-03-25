@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RAGAgent } from '@/lib/rag/rag_agent';
+import { getRAGAgent } from '@/lib/rag/agent';
 import { ConfigManager, loadConfigFromEnv } from '@/lib/rag/config';
 
-const configManager = new ConfigManager(loadConfigFromEnv());
-const config = configManager.get();
-
-const ragAgent = new RAGAgent({
-  openaiApiKey: config.openai.apiKey,
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  chromaUrl: config.vectorStore.chromaUrl,
-  vectorStoreType: config.vectorStore.type,
-  modelName: config.openai.model,
-  chunkSize: config.chunking.chunkSize,
-  chunkOverlap: config.chunking.chunkOverlap,
-});
+const config = new ConfigManager(loadConfigFromEnv()).get();
+const ragAgent = getRAGAgent();
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,4 +1,5 @@
 import { createServerClientSSR } from '@/lib/supabase/server'
+import { getRAGAgent } from '@/lib/rag/agent'
 import { requireAuth } from '@/lib/utils/auth'
 import { ChatMessageSchema } from '@/lib/types'
 import { successResponse, errorResponse, handleError } from '@/lib/utils/api-response'
@@ -24,54 +25,45 @@ export async function POST(request: NextRequest) {
       return errorResponse('Session not found', 404)
     }
 
-    // Save user message
-    const { data: userMessage, error: userMessageError } = await supabase
-      .from('chat_messages')
-      .insert({
-        session_id: validatedData.sessionId,
-        role: 'user' as const,
-        content: validatedData.content,
-      } as any)
-      .select()
-      .single()
+    const ragAgent = getRAGAgent()
+    const result = await ragAgent.query(
+      validatedData.content,
+      user.id,
+      validatedData.sessionId,
+      session.paper_id || undefined
+    )
 
-    if (userMessageError) {
-      throw userMessageError
+    const { data: latestMessages, error: latestMessagesError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('session_id', validatedData.sessionId)
+      .in('role', ['user', 'assistant'])
+      .order('created_at', { ascending: false })
+      .limit(4)
+
+    if (latestMessagesError) {
+      throw latestMessagesError
     }
 
-    // TODO: Implement RAG pipeline
-    // 1. Retrieve relevant chunks from paper_chunks using vector similarity
-    // 2. Build context with citations
-    // 3. Generate response using GPT-4o-mini
-    // 4. Save assistant message with citations
+    const userMessage =
+      latestMessages?.find((message: any) => (
+        message.role === 'user' && message.content === validatedData.content
+      )) ||
+      latestMessages?.find((message: any) => message.role === 'user') ||
+      null
 
-    // For now, return a placeholder response
-    const placeholderResponse = "I'm ready to help you understand this paper! However, the RAG (Retrieval Augmented Generation) system is not yet implemented. Once it's ready, I'll be able to:\n\n1. Search through the paper content\n2. Find relevant sections to answer your question\n3. Provide accurate responses with citations\n\nPlease check back soon!"
-
-    // Save assistant message (placeholder)
-    const { data: assistantMessage, error: assistantMessageError } = await supabase
-      .from('chat_messages')
-      .insert({
-        session_id: validatedData.sessionId,
-        role: 'assistant' as const,
-        content: placeholderResponse,
-      } as any)
-      .select()
-      .single()
-
-    if (assistantMessageError) {
-      throw assistantMessageError
-    }
-
-    // Update session's updated_at timestamp
-    await (supabase
-      .from('chat_sessions') as any)
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', validatedData.sessionId)
+    const assistantMessage =
+      latestMessages?.find((message: any) => message.role === 'assistant') ||
+      null
 
     return successResponse({
       userMessage,
       assistantMessage,
+      answer: result.answer,
+      sources: result.sources,
+      citations: result.citations,
+      queryTime: result.queryTime,
+      sessionId: result.sessionId,
     })
   } catch (error) {
     return handleError(error)
