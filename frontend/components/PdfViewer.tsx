@@ -150,7 +150,7 @@ export function PdfViewer({
         const pageAspectRatio = viewport.width / viewport.height;
 
         const containerHeight = containerRef.current!.clientHeight - 80; // Leave space for controls
-        const containerWidth = containerRef.current!.clientWidth - 100;
+        const containerWidth = containerRef.current!.clientWidth - 32; // Account for p-4 padding (16px × 2)
 
         // Calculate width that would make 80% of page height visible
         const targetHeight = containerHeight * 0.8;
@@ -329,7 +329,7 @@ export function PdfViewer({
       {/* Scrollable PDF container with all pages */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto scroll-smooth"
+        className={`flex-1 overflow-y-auto scroll-smooth ${scale <= 1 ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
       >
         <div className="flex flex-col items-center gap-4 p-4 pb-16">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
@@ -339,6 +339,7 @@ export function PdfViewer({
                 if (el) canvasRefs.current.set(pageNum, el);
               }}
               className="shadow-lg bg-white"
+              style={scale <= 1 ? { maxWidth: '100%' } : undefined}
             />
           ))}
         </div>
